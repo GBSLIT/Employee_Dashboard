@@ -116,17 +116,18 @@
 <body>
 <div id="root"></div>
 
-<!-- MSAL + OneDrive Graph helper (module) -->
-<script type="module">
-  import * as msal from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.esm.min.js";
-
+<!-- === MSAL UMD + OneDrive Graph helper (non-module, UMD build) ===
+     This replaces the module approach and avoids import problems when served
+     over http(s). Keep this block and remove any other msal module script. -->
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.min.js"></script>
+<script>
+(function(){
   // --- REPLACE THESE with your values ---
   const CLIENT_ID = "accad762-6c84-4b00-a9d6-98ddacb8e789";
   const TENANT_ID = "93846c24-8666-4033-8b6e-901877a2cf98";
-  const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/"; // e.g. https://yourusername.github.io/yourrepo/
+  const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/"; // e.g. "https://yourusername.github.io/yourrepo/" or "http://localhost:8000/"
   const DRIVE_ID = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
   const FILE_ID  = "16GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
-  // --- OPTIONAL: table names (match Excel Table Name exactly) ---
   const TABLES = {
     employees: "Employees",
     attendance: "Attendance",
@@ -136,10 +137,15 @@
   };
   // ---------------------------------------
 
+  if (!window.msal || typeof window.msal.PublicClientApplication !== 'function') {
+    console.error('MSAL UMD not loaded. Check network or CDN blocking.');
+    return;
+  }
+
   const msalInstance = new msal.PublicClientApplication({
     auth: {
       clientId: CLIENT_ID,
-      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      authority: 'https://login.microsoftonline.com/' + TENANT_ID,
       redirectUri: REDIRECT_URI
     },
     cache: { cacheLocation: "sessionStorage" }
@@ -154,36 +160,33 @@
     }
     const account = msalInstance.getAllAccounts()[0];
     try {
-      const tokenResponse = await msalInstance.acquireTokenSilent({
-        scopes: SCOPES,
-        account
-      });
-      return tokenResponse.accessToken;
-    } catch (e) {
-      const tokenResponse = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
-      return tokenResponse.accessToken;
+      const result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account });
+      return result.accessToken;
+    } catch (err) {
+      const result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+      return result.accessToken;
     }
   }
 
-  // fetch a table's columns & rows and return array of objects: [{col1: val, col2: val}, ...]
   window.fetchOneDriveTable = async function(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
     const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
+
     // fetch columns
     const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: 'Bearer ' + token }
     });
     if(!colRes.ok) {
       const txt = await colRes.text().catch(()=>'');
       throw new Error('Columns fetch failed: ' + colRes.status + ' ' + txt);
     }
     const colJson = await colRes.json();
-    const columns = colJson.value.map(c => c.name);
+    const columns = (colJson.value || []).map(c => c.name);
 
     // fetch rows
     const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
-      headers: { Authorization: `Bearer ${token}` }
+      headers: { Authorization: 'Bearer ' + token }
     });
     if(!rowRes.ok) {
       const txt = await rowRes.text().catch(()=>'');
@@ -199,38 +202,22 @@
     return rows;
   };
 
-  // expose msal instance helper if you want to call login separately
   window.msalOneDrive = {
     msalInstance,
-    async loginPopup() { return msalInstance.loginPopup({ scopes: SCOPES }); },
-    getAccount() { return msalInstance.getAllAccounts()[0] || null; }
+    loginPopup: async () => msalInstance.loginPopup({ scopes: SCOPES }),
+    getAccount: () => msalInstance.getAllAccounts()[0] || null
   };
+
+  console.info('fetchOneDriveTable helper initialized (UMD).');
+})();
 </script>
+<!-- === end MSAL UMD helper === -->
 
 <!-- React UMD -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <!-- Babel compiler -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!--
-  Safety stub: if the module failed to run (so window.fetchOneDriveTable isn't defined),
-  this stub provides a clear error and prevents the crash "fetchOneDriveTable is not a function".
-  It preserves the original behavior when the module loads successfully (the real function will overwrite).
--->
-<script>
-  if (typeof window.fetchOneDriveTable !== 'function') {
-    window.fetchOneDriveTable = async function() {
-      throw new Error(
-        'fetchOneDriveTable helper not available. Possible causes: ' +
-        '1) The ES module failed to load (check DevTools Console), ' +
-        '2) You opened the page via file:// (use http(s) or GitHub Pages), ' +
-        '3) CDN or network blocked the msal import. ' +
-        'Open DevTools Console for the full module error.'
-      );
-    };
-  }
-</script>
 
 <script type="text/babel">
 const { useState } = React;
@@ -255,6 +242,9 @@ function LoginPage({ onLogin, onShowForgot }) {
 
     setLoading(true);
     try {
+      if(typeof window.fetchOneDriveTable !== 'function') {
+        throw new Error('fetchOneDriveTable helper not available. Possible causes: 1) The ES module failed to load, 2) You opened the page via file:// (use http(s) or GitHub Pages), 3) CDN or network blocked the msal import. Open DevTools Console for the full module error.');
+      }
       // fetch employees table live from OneDrive
       const rows = await window.fetchOneDriveTable('employees');
       // normalize keys: check variants
@@ -270,7 +260,6 @@ function LoginPage({ onLogin, onShowForgot }) {
         return;
       }
 
-      // success - pass canonical employee id (from sheet) to parent
       const canonicalId = (match.employeeId || match.EmployeeID || match['Employee ID'] || match.id || match.ID);
       onLogin(canonicalId.toString());
     } catch (err) {
@@ -334,7 +323,6 @@ function LoginPage({ onLogin, onShowForgot }) {
 
 /* ---------------------------------------
    Forgot Password (demo: reset in-memory local)
-   We keep basic demo flow — for production you'd implement secure reset.
 --------------------------------------- */
 function ForgotPassword({ onDone }) {
   const [employeeId, setEmployeeId] = useState('');
@@ -356,8 +344,6 @@ function ForgotPassword({ onDone }) {
       return;
     }
 
-    // NOTE: This demo flow DOES NOT write back to OneDrive.
-    // For safety we update nothing on server. Inform user to contact admin.
     setMsg('Password reset is not available in this demo. Contact HR to reset your password.');
     setEmployeeId(''); setNewPw(''); setConfirm('');
   }
@@ -403,9 +389,9 @@ function ForgotPassword({ onDone }) {
   );
 }
 
-/* (rest of your dashboard code remains identical) */
-/* ... (omitted here only to keep message shorter; full code continues exactly as you provided) */
-
+/* ---------------------------------------
+   Dashboard components (unchanged)
+--------------------------------------- */
 function Sidebar({ current, onSelect, onLogout }) {
   const tabs = ['Overview','Attendance','Leaves','Payroll','HTM Codes','Profile'];
   return (
@@ -597,6 +583,10 @@ function App() {
 
   async function loadLiveDataFor(employeeId) {
     try {
+      if(typeof window.fetchOneDriveTable !== 'function') {
+        throw new Error('fetchOneDriveTable helper not available (see console).');
+      }
+
       const empRows = await window.fetchOneDriveTable('employees').catch(()=>null);
       if(empRows && empRows.length) {
         setEmployees(empRows.map(r => ({
@@ -657,7 +647,7 @@ function App() {
       }
     } catch (err) {
       console.error('Live data load failed', err);
-      // keep empty arrays if load fails
+      // keep arrays empty if load fails
     }
   }
 
@@ -715,4 +705,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
-
