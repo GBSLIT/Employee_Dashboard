@@ -103,6 +103,7 @@
     .pw-row { display:flex; gap:8px; align-items:center; }
     .pw-toggle { background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; }
     .notice { font-size:13px; color:#065f46; background:#ecfdf5; padding:8px 10px; border-radius:8px; border:1px solid #bbf7d0; margin-top:8px; }
+    .diag { color:#b91c1c; font-size:13px; margin-top:8px; }
 
     @media (max-width:900px){
       .sidebar{display:none;}
@@ -116,102 +117,116 @@
 <body>
 <div id="root"></div>
 
-<!-- === MSAL UMD + OneDrive Graph helper (non-module, UMD build) ===
-     This replaces the module approach and avoids import problems when served
-     over http(s). Keep this block and remove any other msal module script. -->
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.min.js"></script>
+<!-- Robust MSAL loader: tries multiple CDNs and initializes helper only after script loads -->
 <script>
 (function(){
-  // --- REPLACE THESE with your values ---
-  const CLIENT_ID = "accad762-6c84-4b00-a9d6-98ddacb8e789";
-  const TENANT_ID = "93846c24-8666-4033-8b6e-901877a2cf98";
-  const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/"; // e.g. "https://yourusername.github.io/yourrepo/" or "http://localhost:8000/"
-  const DRIVE_ID = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
-  const FILE_ID  = "16GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
-  const TABLES = {
-    employees: "Employees",
-    attendance: "Attendance",
-    leaves: "Leaves",
-    payroll: "Payroll",
-    htm: "HTM_LeaveCodes"
-  };
-  // ---------------------------------------
+  const CDNS = [
+    "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.min.js",
+    "https://unpkg.com/@azure/msal-browser@2.38.0/dist/msal-browser.min.js"
+  ];
 
-  if (!window.msal || typeof window.msal.PublicClientApplication !== 'function') {
-    console.error('MSAL UMD not loaded. Check network or CDN blocking.');
-    return;
+  const CONFIG = {
+    CLIENT_ID: "accad762-6c84-4b00-a9d6-98ddacb8e789",
+    TENANT_ID: "93846c24-8666-4033-8b6e-901877a2cf98",
+    REDIRECT_URI: "https://gbslit.github.io/Employee_Dashboard/", // <-- must match exactly in Azure
+    DRIVE_ID: "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo",
+    FILE_ID:  "16GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E",
+    TABLES: { employees: "Employees", attendance: "Attendance", leaves: "Leaves", payroll: "Payroll", htm: "HTM_LeaveCodes" }
+  };
+
+  function loadScript(url, timeout = 10000){
+    return new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = url;
+      s.async = true;
+      s.onload = () => res(url);
+      s.onerror = (e) => rej(new Error('Script load error: ' + url));
+      document.head.appendChild(s);
+      setTimeout(()=>rej(new Error('Script load timeout: ' + url)), timeout);
+    });
   }
 
-  const msalInstance = new msal.PublicClientApplication({
-    auth: {
-      clientId: CLIENT_ID,
-      authority: 'https://login.microsoftonline.com/' + TENANT_ID,
-      redirectUri: REDIRECT_URI
-    },
-    cache: { cacheLocation: "sessionStorage" }
-  });
-
-  const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
-
-  async function getToken() {
-    const accounts = msalInstance.getAllAccounts();
-    if (accounts.length === 0) {
-      await msalInstance.loginPopup({ scopes: SCOPES });
+  async function tryLoadMsal() {
+    let lastErr = null;
+    for (const u of CDNS){
+      try {
+        await loadScript(u);
+        if(window.msal && typeof window.msal.PublicClientApplication === 'function'){
+          return;
+        }
+        lastErr = new Error('msal loaded but PublicClientApplication not found: ' + u);
+      } catch (err) {
+        lastErr = err;
+      }
     }
-    const account = msalInstance.getAllAccounts()[0];
+    throw lastErr || new Error('Failed to load msal from all CDNs');
+  }
+
+  async function init() {
     try {
-      const result = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account });
-      return result.accessToken;
-    } catch (err) {
-      const result = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
-      return result.accessToken;
+      await tryLoadMsal();
+      const msalInstance = new window.msal.PublicClientApplication({
+        auth: {
+          clientId: CONFIG.CLIENT_ID,
+          authority: 'https://login.microsoftonline.com/' + CONFIG.TENANT_ID,
+          redirectUri: CONFIG.REDIRECT_URI
+        },
+        cache: { cacheLocation: "sessionStorage" }
+      });
+      const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
+      async function getToken(){
+        const accounts = msalInstance.getAllAccounts();
+        if(accounts.length === 0) {
+          await msalInstance.loginPopup({ scopes: SCOPES });
+        }
+        const acc = msalInstance.getAllAccounts()[0];
+        try {
+          const tr = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: acc });
+          return tr.accessToken;
+        } catch(e){
+          const tr = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+          return tr.accessToken;
+        }
+      }
+
+      window.fetchOneDriveTable = async function(tableKeyOrName){
+        const tableName = CONFIG.TABLES[tableKeyOrName] || tableKeyOrName;
+        const token = await getToken();
+        const base = `https://graph.microsoft.com/v1.0/drives/${CONFIG.DRIVE_ID}/items/${CONFIG.FILE_ID}/workbook`;
+        // columns
+        const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, { headers: { Authorization: 'Bearer ' + token }});
+        if(!colRes.ok){ const t = await colRes.text().catch(()=>''); throw new Error('Columns fetch failed: ' + colRes.status + ' ' + t); }
+        const colJson = await colRes.json();
+        const columns = (colJson.value||[]).map(c=>c.name);
+        // rows
+        const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, { headers: { Authorization: 'Bearer ' + token }});
+        if(!rowRes.ok){ const t = await rowRes.text().catch(()=>''); throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + t); }
+        const rowJson = await rowRes.json();
+        const rows = (rowJson.value||[]).map(r => {
+          const vals = (r.values && r.values[0]) ? r.values[0] : [];
+          const obj = {};
+          for(let i=0;i<columns.length;i++) obj[columns[i]] = vals[i] ?? null;
+          return obj;
+        });
+        return rows;
+      };
+
+      window.msalOneDrive = {
+        msalInstance,
+        loginPopup: async () => msalInstance.loginPopup({ scopes: SCOPES }),
+        getAccount: () => msalInstance.getAllAccounts()[0] || null
+      };
+
+      console.info('fetchOneDriveTable helper initialized (robust loader).');
+    } catch (err){
+      console.error('MSAL init failed:', err);
+      window._msalInitError = (err && (err.message || String(err))) || 'Unknown init error';
     }
   }
 
-  window.fetchOneDriveTable = async function(tableKeyOrName) {
-    const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
-    const token = await getToken();
-    const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
-
-    // fetch columns
-    const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if(!colRes.ok) {
-      const txt = await colRes.text().catch(()=>'');
-      throw new Error('Columns fetch failed: ' + colRes.status + ' ' + txt);
-    }
-    const colJson = await colRes.json();
-    const columns = (colJson.value || []).map(c => c.name);
-
-    // fetch rows
-    const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if(!rowRes.ok) {
-      const txt = await rowRes.text().catch(()=>'');
-      throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + txt);
-    }
-    const rowJson = await rowRes.json();
-    const rows = (rowJson.value || []).map(r => {
-      const vals = (r.values && r.values[0]) ? r.values[0] : [];
-      const obj = {};
-      for (let i=0;i<columns.length;i++) obj[columns[i]] = vals[i] ?? null;
-      return obj;
-    });
-    return rows;
-  };
-
-  window.msalOneDrive = {
-    msalInstance,
-    loginPopup: async () => msalInstance.loginPopup({ scopes: SCOPES }),
-    getAccount: () => msalInstance.getAllAccounts()[0] || null
-  };
-
-  console.info('fetchOneDriveTable helper initialized (UMD).');
+  init();
 })();
 </script>
-<!-- === end MSAL UMD helper === -->
 
 <!-- React UMD -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
@@ -243,11 +258,10 @@ function LoginPage({ onLogin, onShowForgot }) {
     setLoading(true);
     try {
       if(typeof window.fetchOneDriveTable !== 'function') {
-        throw new Error('fetchOneDriveTable helper not available. Possible causes: 1) The ES module failed to load, 2) You opened the page via file:// (use http(s) or GitHub Pages), 3) CDN or network blocked the msal import. Open DevTools Console for the full module error.');
+        const diag = window._msalInitError || 'fetchOneDriveTable helper not available.';
+        throw new Error(diag + ' Possible causes: 1) page opened via file://, 2) redirect URI mismatch in Azure, 3) CDN/network blocked MSAL. Check console for full error.');
       }
-      // fetch employees table live from OneDrive
       const rows = await window.fetchOneDriveTable('employees');
-      // normalize keys: check variants
       const match = (rows || []).find(r => {
         const id = (r.employeeId || r.EmployeeID || r['Employee ID'] || r.id || r.ID || '').toString().trim().toLowerCase();
         const pw = (r.password || r.Password || '').toString();
@@ -269,6 +283,8 @@ function LoginPage({ onLogin, onShowForgot }) {
       setLoading(false);
     }
   }
+
+  const initDiag = window._msalInitError;
 
   return (
     <div className="login-wrap">
@@ -304,7 +320,8 @@ function LoginPage({ onLogin, onShowForgot }) {
             </div>
           </div>
 
-          {error && <div style={{color:'#dc2626',fontSize:13,marginTop:6}}>{error}</div>}
+          {error && <div className="diag">{error}</div>}
+          {initDiag && <div className="diag">Init error: {initDiag}</div>}
 
           <div style={{display:'flex', gap:8, justifyContent:'space-between', alignItems:'center', marginTop:12}}>
             <button className="btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
