@@ -5,719 +5,288 @@
   <title>Employee Dashboard - Live</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    :root{
-      --bg:#f6f8fb; --card:#ffffff; --muted:#64748b;
-      --accent:#2563eb; --radius:14px;
-    }
-    html,body,#root{height:100%; margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
-    body{background:linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%); color:#0f172a;}
-    .app { display:flex; min-height:100vh; }
-
-    .sidebar {
-      width:220px; background:rgba(255,255,255,0.92);
-      box-shadow: 8px 0 24px rgba(15,23,42,0.03);
-      padding:20px; border-right:1px solid #eef2f7;
-      position:sticky; top:0; height:100vh; box-sizing:border-box;
-    }
-
-    .logo { font-weight:700; font-size:18px; margin-bottom:18px; }
-    .nav { margin-top:18px; display:flex; flex-direction:column; gap:6px; }
-    .nav button {
-      text-align:left; background:none; border:none;
-      padding:10px 12px; border-radius:10px;
-      cursor:pointer; color:#0f172a; font-weight:500;
-    }
-    .nav button:hover{ background:#f1f5f9; }
-    .nav .active{
-      background:linear-gradient(90deg, rgba(37,99,235,0.1), rgba(80,123,255,0.03));
-      color:var(--accent);
-    }
-
-    .main { flex:1; padding:28px; box-sizing:border-box; }
-    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
-    .kpi-row { display:flex; gap:12px; flex-wrap:wrap; }
-    .kpi {
-      background:var(--card); border-radius:12px;
-      padding:16px; box-shadow: 0 6px 18px rgba(15,23,42,0.04);
-      min-width:170px;
-    }
-    .kpi .label{ color:var(--muted); font-size:12px; }
-    .kpi .value{ font-size:20px; font-weight:700; margin-top:6px; }
-
-    .card {
-      background:var(--card); border-radius:12px;
-      padding:16px; box-shadow: 0 8px 28px rgba(15,23,42,0.03);
-      margin-top:16px;
-    }
-
-    .row { display:flex; gap:12px; }
-    .col-2 { display:flex; flex-direction:column; gap:12px; flex:1; }
-    table { width:100%; border-collapse:collapse; margin-top:12px; }
-    th, td {
-      text-align:left; padding:10px 8px;
-      border-bottom:1px solid #f1f5f9;
-      font-size:14px;
-    }
-
-    .muted { color:var(--muted); font-size:13px; }
-
-    .btn {
-      background:var(--accent); color:#fff;
-      border:none; padding:8px 12px;
-      border-radius:10px; cursor:pointer;
-    }
-
-    .search {
-      padding:8px 12px; border-radius:10px;
-      border:1px solid #eef2f7; width:220px;
-    }
-
-    .login-wrap {
-      min-height:100vh;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .login-card {
-      width:420px; background:var(--card);
-      padding:28px; border-radius:16px;
-      box-shadow: 0 12px 40px rgba(15,23,42,0.06);
-    }
-    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-    .input { padding:10px 12px; border-radius:10px; border:1px solid #e6eefb; }
-    .small { font-size:13px; color:var(--muted); }
-
-    .tabbar { display:flex; gap:8px; margin-top:12px; }
-    .tab {
-      padding:8px 12px; border-radius:10px;
-      background:#f8fafc; cursor:pointer;
-      font-weight:600;
-    }
-    .tab.active {
-      background:linear-gradient(90deg,#eef2ff,#fff);
-      color:var(--accent);
-      box-shadow:0 6px 18px rgba(37,99,235,0.06);
-    }
-
-    .link-btn { background:none; border:none; color:var(--accent); cursor:pointer; padding:0; font-weight:600; }
-    footer { margin-top:24px; color:var(--muted); font-size:13px; }
-
-    .pw-row { display:flex; gap:8px; align-items:center; }
-    .pw-toggle { background:none; border:none; cursor:pointer; padding:6px; border-radius:8px; }
-    .notice { font-size:13px; color:#065f46; background:#ecfdf5; padding:8px 10px; border-radius:8px; border:1px solid #bbf7d0; margin-top:8px; }
-    .diag { color:#b91c1c; font-size:13px; margin-top:8px; }
-
-    @media (max-width:900px){
-      .sidebar{display:none;}
-      .main{padding:14px;}
-      .row{flex-direction:column;}
-      .kpi{min-width:140px;}
-    }
+    /* minimal styles - keep same look as yours if desired */
+    body { font-family: Inter, Arial, sans-serif; background:#f6f8fb; color:#0f172a; margin:0; padding:18px; }
+    .card{ background:#fff;padding:18px;border-radius:12px;box-shadow:0 8px 24px rgba(15,23,42,0.06); max-width:920px;margin:12px auto;}
+    label{display:block;margin-top:8px;font-weight:600}
+    input{padding:8px;border-radius:8px;border:1px solid #e6eefb;width:100%}
+    button{margin-top:12px;padding:10px 14px;border-radius:8px;background:#2563eb;color:white;border:none;cursor:pointer}
+    .diag{color:#b91c1c;margin-top:10px}
+    .kpis{display:flex;gap:12px;margin-top:12px}
+    .kpi{flex:1;background:#f8fbff;padding:12px;border-radius:8px;text-align:center}
+    table{width:100%;border-collapse:collapse;margin-top:12px}
+    th,td{border-bottom:1px solid #eef2f7;padding:8px;text-align:left}
   </style>
 </head>
-
 <body>
-<div id="root"></div>
 
-<!-- Robust MSAL loader: tries multiple CDNs and initializes helper only after script loads -->
+<div class="card">
+  <h2>Employee Dashboard — Live</h2>
+
+  <div id="statusLine">Initializing...</div>
+
+  <div style="margin-top:12px">
+    <label>Employee ID</label>
+    <input id="empId" placeholder="e.g. GBSL1015" />
+    <label>Password (sheet-stored password)</label>
+    <input id="empPw" placeholder="Enter password" type="password" />
+    <div style="display:flex;gap:8px">
+      <button id="signInBtn">Sign in (Live)</button>
+      <button id="logoutBtn" style="background:#ef4444; display:none">Sign out</button>
+    </div>
+    <div id="diag" class="diag"></div>
+  </div>
+
+  <div id="dashboardArea" style="display:none">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="welcome">Welcome</h3>
+      <div>
+        <button id="applyLeave">Apply Leave</button>
+        <button id="markAttendance" style="background:#06b6d4">Mark Attendance</button>
+      </div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div>Total Employees</div><div id="totalEmployees">—</div></div>
+      <div class="kpi"><div>Present Today</div><div id="presentToday">—</div></div>
+      <div class="kpi"><div>Pending Leaves</div><div id="pendingLeaves">—</div></div>
+    </div>
+
+    <h4>Attendance (latest)</h4>
+    <table id="attendanceTable"><thead><tr><th>Employee</th><th>Status</th><th>In</th><th>Out</th></tr></thead><tbody></tbody></table>
+
+    <h4>Leaves</h4>
+    <table id="leavesTable"><thead><tr><th>Employee</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr></thead><tbody></tbody></table>
+
+    <h4>Profile</h4>
+    <table id="profileTable"><tbody></tbody></table>
+  </div>
+</div>
+
 <script>
-(function(){
-  const CDNS = [
-    "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.min.js",
-    "https://unpkg.com/@azure/msal-browser@2.38.0/dist/msal-browser.min.js"
-  ];
+/* --------------- CONFIG - REPLACE these with your values ----------------- */
+const CLIENT_ID = "ab387506-c162-4abf-8ca0-ea974f1e6e0c";
+const TENANT_ID = "93846c24-8666-4033-8b6e-901877a2cf98";
+const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/"; // exact URL registered in Azure (e.g. https://yourusername.github.io/yourrepo/)
+const DRIVE_ID = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
+const FILE_ID  = "16GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
+/* table names in workbook */
+const TABLES = { employees: "Employees", attendance: "Attendance", leaves: "Leaves", htm: "HTM_LeaveCodes" };
+/* ------------------------------------------------------------------------ */
 
-  const CONFIG = {
-    CLIENT_ID: "accad762-6c84-4b00-a9d6-98ddacb8e789",
-    TENANT_ID: "93846c24-8666-4033-8b6e-901877a2cf98",
-    REDIRECT_URI: "https://gbslit.github.io/Employee_Dashboard/", // <-- must match exactly in Azure
-    DRIVE_ID: "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo",
-    FILE_ID:  "16GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E",
-    TABLES: { employees: "Employees", attendance: "Attendance", leaves: "Leaves", payroll: "Payroll", htm: "HTM_LeaveCodes" }
-  };
+/* Dynamic diagnostics + robust MSAL loader with fallback CDNs */
+const diag = (msg) => { document.getElementById('diag').textContent = msg; };
+document.getElementById('statusLine').textContent = 'Loading msal...';
 
-  function loadScript(url, timeout = 10000){
-    return new Promise((res, rej) => {
-      const s = document.createElement('script');
-      s.src = url;
-      s.async = true;
-      s.onload = () => res(url);
-      s.onerror = (e) => rej(new Error('Script load error: ' + url));
-      document.head.appendChild(s);
-      setTimeout(()=>rej(new Error('Script load timeout: ' + url)), timeout);
-    });
-  }
+const MSAL_CDNS = [
+  "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.min.js",
+  "https://unpkg.com/@azure/msal-browser@2.38.0/dist/msal-browser.min.js"
+];
 
-  async function tryLoadMsal() {
-    let lastErr = null;
-    for (const u of CDNS){
-      try {
-        await loadScript(u);
-        if(window.msal && typeof window.msal.PublicClientApplication === 'function'){
-          return;
-        }
-        lastErr = new Error('msal loaded but PublicClientApplication not found: ' + u);
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-    throw lastErr || new Error('Failed to load msal from all CDNs');
-  }
+function loadScript(url, timeout = 10000){
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.async = true;
+    s.onload = () => resolve(url);
+    s.onerror = () => reject(new Error('Script load error: ' + url));
+    document.head.appendChild(s);
+    setTimeout(()=>reject(new Error('Script load timeout: ' + url)), timeout);
+  });
+}
 
-  async function init() {
+async function loadMsal() {
+  let lastError = null;
+  for (const u of MSAL_CDNS) {
     try {
-      await tryLoadMsal();
-      const msalInstance = new window.msal.PublicClientApplication({
-        auth: {
-          clientId: CONFIG.CLIENT_ID,
-          authority: 'https://login.microsoftonline.com/' + CONFIG.TENANT_ID,
-          redirectUri: CONFIG.REDIRECT_URI
-        },
-        cache: { cacheLocation: "sessionStorage" }
-      });
-      const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
-      async function getToken(){
-        const accounts = msalInstance.getAllAccounts();
-        if(accounts.length === 0) {
-          await msalInstance.loginPopup({ scopes: SCOPES });
-        }
-        const acc = msalInstance.getAllAccounts()[0];
-        try {
-          const tr = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: acc });
-          return tr.accessToken;
-        } catch(e){
-          const tr = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
-          return tr.accessToken;
-        }
-      }
-
-      window.fetchOneDriveTable = async function(tableKeyOrName){
-        const tableName = CONFIG.TABLES[tableKeyOrName] || tableKeyOrName;
-        const token = await getToken();
-        const base = `https://graph.microsoft.com/v1.0/drives/${CONFIG.DRIVE_ID}/items/${CONFIG.FILE_ID}/workbook`;
-        // columns
-        const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, { headers: { Authorization: 'Bearer ' + token }});
-        if(!colRes.ok){ const t = await colRes.text().catch(()=>''); throw new Error('Columns fetch failed: ' + colRes.status + ' ' + t); }
-        const colJson = await colRes.json();
-        const columns = (colJson.value||[]).map(c=>c.name);
-        // rows
-        const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, { headers: { Authorization: 'Bearer ' + token }});
-        if(!rowRes.ok){ const t = await rowRes.text().catch(()=>''); throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + t); }
-        const rowJson = await rowRes.json();
-        const rows = (rowJson.value||[]).map(r => {
-          const vals = (r.values && r.values[0]) ? r.values[0] : [];
-          const obj = {};
-          for(let i=0;i<columns.length;i++) obj[columns[i]] = vals[i] ?? null;
-          return obj;
-        });
-        return rows;
-      };
-
-      window.msalOneDrive = {
-        msalInstance,
-        loginPopup: async () => msalInstance.loginPopup({ scopes: SCOPES }),
-        getAccount: () => msalInstance.getAllAccounts()[0] || null
-      };
-
-      console.info('fetchOneDriveTable helper initialized (robust loader).');
-    } catch (err){
-      console.error('MSAL init failed:', err);
-      window._msalInitError = (err && (err.message || String(err))) || 'Unknown init error';
-    }
-  }
-
-  init();
-})();
-</script>
-
-<!-- React UMD -->
-<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<!-- Babel compiler -->
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<script type="text/babel">
-const { useState } = React;
-
-/* ---------------------------------------
-   LOGIN PAGE (EMPID + Password validated against OneDrive Employees table)
---------------------------------------- */
-function LoginPage({ onLogin, onShowForgot }) {
-  const [employeeId, setEmployeeId] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function submit(e){
-    e.preventDefault();
-    setError('');
-    if(!employeeId.trim() || !password){
-      setError('Please enter Employee ID and Password');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      if(typeof window.fetchOneDriveTable !== 'function') {
-        const diag = window._msalInitError || 'fetchOneDriveTable helper not available.';
-        throw new Error(diag + ' Possible causes: 1) page opened via file://, 2) redirect URI mismatch in Azure, 3) CDN/network blocked MSAL. Check console for full error.');
-      }
-      const rows = await window.fetchOneDriveTable('employees');
-      const match = (rows || []).find(r => {
-        const id = (r.employeeId || r.EmployeeID || r['Employee ID'] || r.id || r.ID || '').toString().trim().toLowerCase();
-        const pw = (r.password || r.Password || '').toString();
-        return id === employeeId.trim().toLowerCase() && pw === password;
-      });
-
-      if(!match) {
-        setError('Invalid Employee ID or Password.');
-        setLoading(false);
+      await loadScript(u);
+      if(window.msal && typeof window.msal.PublicClientApplication === 'function') {
+        console.info('MSAL loaded from', u);
         return;
       }
-
-      const canonicalId = (match.employeeId || match.EmployeeID || match['Employee ID'] || match.id || match.ID);
-      onLogin(canonicalId.toString());
-    } catch (err) {
-      console.error('Login/Employees fetch error', err);
-      setError('Login failed: ' + (err.message || 'Unable to fetch employees'));
-    } finally {
-      setLoading(false);
+      lastError = new Error('MSAL loaded but PublicClientApplication not found: ' + u);
+    } catch (e) {
+      lastError = e;
     }
   }
-
-  const initDiag = window._msalInitError;
-
-  return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-          <div style={{fontSize:20,fontWeight:700}}>Company HR</div>
-          <div style={{color:'var(--muted)',fontSize:13}}>Live login</div>
-        </div>
-
-        <h2 style={{marginTop:6}}>Employee Sign In</h2>
-        <p className="small">Enter your Employee ID & Password</p>
-
-        <form onSubmit={submit} style={{marginTop:12}}>
-          <div className="field">
-            <label className="small">Employee ID</label>
-            <input className="input" value={employeeId} onChange={(e)=>{setEmployeeId(e.target.value); setError('')}} placeholder="e.g. GBSL1015" />
-          </div>
-
-          <div className="field">
-            <label className="small">Password</label>
-            <div className="pw-row">
-              <input
-                className="input"
-                style={{flex:1}}
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e)=>{setPassword(e.target.value); setError('')}}
-                placeholder="Enter password"
-              />
-              <button type="button" aria-label="Toggle password visibility" className="pw-toggle" onClick={()=>setShowPassword(s=>!s)}>
-                {showPassword ? '🙈' : '👁️'}
-              </button>
-            </div>
-          </div>
-
-          {error && <div className="diag">{error}</div>}
-          {initDiag && <div className="diag">Init error: {initDiag}</div>}
-
-          <div style={{display:'flex', gap:8, justifyContent:'space-between', alignItems:'center', marginTop:12}}>
-            <button className="btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button>
-            <div style={{display:'flex',gap:10,alignItems:'center'}}>
-              <button type="button" className="link-btn" onClick={() => onShowForgot(true)}>Forgot?</button>
-              <div className="small">Try: GBSL1015 / SADIQ</div>
-            </div>
-          </div>
-        </form>
-
-        <footer style={{marginTop:16}} className="small muted">Live mode — authenticate using OneDrive Employees table.</footer>
-      </div>
-    </div>
-  );
+  throw lastError || new Error('Failed to load MSAL from all CDNs');
 }
 
-/* ---------------------------------------
-   Forgot Password (demo: reset in-memory local)
---------------------------------------- */
-function ForgotPassword({ onDone }) {
-  const [employeeId, setEmployeeId] = useState('');
-  const [newPw, setNewPw] = useState('');
-  const [confirm, setConfirm] = useState('');
-  const [msg, setMsg] = useState('');
-  const [error, setError] = useState('');
+/* Initialize msal + helper that reads Excel tables via Graph */
+let msalInstance = null;
+const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
 
-  async function submit(e){
-    e.preventDefault();
-    setError(''); setMsg('');
-
-    if(!employeeId.trim() || !newPw || !confirm){
-      setError('Please fill all fields.');
-      return;
-    }
-    if(newPw !== confirm){
-      setError('Passwords do not match.');
-      return;
-    }
-
-    setMsg('Password reset is not available in this demo. Contact HR to reset your password.');
-    setEmployeeId(''); setNewPw(''); setConfirm('');
+async function initMsalAndHelpers(){
+  try {
+    await loadMsal();
+  } catch (e) {
+    console.error(e);
+    diag('Init error: ' + e.message + '. Possible causes: page opened via file://, redirect URI mismatch in Azure, or CDN/network blocked MSAL. Check console for details.');
+    document.getElementById('statusLine').textContent = 'Initialization failed';
+    return;
   }
 
-  return (
-    <div className="login-wrap">
-      <div className="login-card">
-        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-          <div style={{fontSize:20,fontWeight:700}}>Reset Password</div>
-          <div style={{color:'var(--muted)',fontSize:13}}>Demo flow</div>
-        </div>
+  msalInstance = new window.msal.PublicClientApplication({
+    auth: { clientId: CLIENT_ID, authority: 'https://login.microsoftonline.com/' + TENANT_ID, redirectUri: REDIRECT_URI },
+    cache: { cacheLocation: 'sessionStorage' }
+  });
 
-        <p className="small">Enter your Employee ID and a new password. In this demo we do not write back to the Excel file.</p>
-
-        <form onSubmit={submit} style={{marginTop:12}}>
-          <div className="field">
-            <label className="small">Employee ID</label>
-            <input className="input" value={employeeId} onChange={(e)=>{setEmployeeId(e.target.value); setError(''); setMsg('')}} placeholder="e.g. GBSL1015" />
-          </div>
-
-          <div className="field">
-            <label className="small">New Password</label>
-            <input className="input" type="password" value={newPw} onChange={(e)=>{setNewPw(e.target.value); setError(''); setMsg('')}} placeholder="New password" />
-          </div>
-
-          <div className="field">
-            <label className="small">Confirm Password</label>
-            <input className="input" type="password" value={confirm} onChange={(e)=>{setConfirm(e.target.value); setError(''); setMsg('')}} placeholder="Confirm password" />
-          </div>
-
-          {error && <div style={{color:'#dc2626',fontSize:13,marginTop:6}}>{error}</div>}
-          {msg && <div className="notice">{msg}</div>}
-
-          <div style={{display:'flex', gap:8, justifyContent:'space-between', alignItems:'center', marginTop:12}}>
-            <button className="btn">Update Password</button>
-            <button type="button" className="link-btn" onClick={()=>onDone()}>Back to sign in</button>
-          </div>
-        </form>
-
-        <footer style={{marginTop:16}} className="small muted">Demo only — no changes made to OneDrive.</footer>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------------------------
-   Dashboard components (unchanged)
---------------------------------------- */
-function Sidebar({ current, onSelect, onLogout }) {
-  const tabs = ['Overview','Attendance','Leaves','Payroll','HTM Codes','Profile'];
-  return (
-    <div className="sidebar">
-      <div className="logo">Acme Corp</div>
-      <div className="muted">Employee Dashboard</div>
-      <div className="nav">
-        {tabs.map(t=>(
-          <button key={t} className={current===t ? 'active' : ''} onClick={()=>onSelect(t)}>{t}</button>
-        ))}
-      </div>
-      <div style={{marginTop:'auto', marginBottom:8}} className="small muted">Signed in as <strong>Demo user</strong></div>
-      <button onClick={onLogout} className="btn" style={{width:'100%'}}>Sign out</button>
-    </div>
-  );
-}
-function KPICard({label, value}) { return <div className="kpi"><div className="label">{label}</div><div className="value">{value}</div></div>; }
-
-function Overview({ employees, attendance, leaves, payroll }) {
-  return (
-    <div>
-      <div className="kpi-row">
-        <KPICard label="Total Employees" value={employees.length} />
-        <KPICard label="Present Today" value={attendance.filter(a=>a.status==='Present').length} />
-        <KPICard label="Pending Leaves" value={leaves.filter(l=>l.status==='Pending').length} />
-        <KPICard label="Payroll Runs" value={payroll.length} />
-      </div>
-
-      <div className="row" style={{marginTop:12}}>
-        <div className="col-2">
-          <div className="card">
-            <strong>Attendance Snapshot</strong>
-            <p className="muted">Latest attendance records</p>
-            <table><thead><tr><th>Employee</th><th>Status</th><th>Time In</th><th>Time Out</th></tr></thead>
-            <tbody>
-              {attendance.map((r,i)=>(<tr key={i}><td>{r.name}</td><td>{r.status}</td><td>{r.timeIn}</td><td>{r.timeOut}</td></tr>))}
-            </tbody></table>
-          </div>
-
-          <div className="card">
-            <strong>Recent Leaves</strong>
-            <p className="muted">Pending leave requests</p>
-            <table><thead><tr><th>Employee</th><th>From</th><th>To</th><th>Status</th></tr></thead>
-            <tbody>
-              {leaves.map((l,i)=>(<tr key={i}><td>{l.name}</td><td>{l.start}</td><td>{l.end}</td><td>{l.status}</td></tr>))}
-            </tbody></table>
-          </div>
-        </div>
-
-        <div style={{width:320}}>
-          <div className="card">
-            <strong>Payroll Summary</strong>
-            <p className="muted">Last payrolls</p>
-            <table><thead><tr><th>Employee</th><th>Net</th><th>Status</th></tr></thead>
-            <tbody>{payroll.map((p,i)=>(<tr key={i}><td>{p.name}</td><td>${p.net}</td><td>{p.status}</td></tr>))}</tbody></table>
-          </div>
-
-          <div className="card" style={{marginTop:12}}>
-            <strong>HTM Codes</strong>
-            <p className="muted">Leave code mapping</p>
-            <table><thead><tr><th>Code</th><th>Desc</th></tr></thead>
-            <tbody>{/* HTM will be passed into HTMTab separately */}</tbody></table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function AttendanceTab({attendance}) {
-  const [filter, setFilter] = useState('All');
-  const [q, setQ] = useState('');
-  const rows = attendance.filter(r => (filter==='All' || r.status===filter) && ((r.name||'').toLowerCase().includes(q.toLowerCase()) || ((r.employeeId||'').toLowerCase().includes(q.toLowerCase()))));
-  return (
-    <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <div className="tabbar">
-          {['All','Present','WFH','On Leave','Absent'].map(t=>(
-            <div key={t} className={`tab ${t===filter?'active':''}`} onClick={()=>setFilter(t)}>{t}</div>
-          ))}
-        </div>
-        <div>
-          <input className="search" placeholder="Search by name or id" value={q} onChange={(e)=>setQ(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="card" style={{marginTop:12}}>
-        <table>
-          <thead><tr><th>Employee</th><th>ID</th><th>Status</th><th>Date</th><th>In</th><th>Out</th></tr></thead>
-          <tbody>
-            {rows.map((r,i)=>(
-              <tr key={i}>
-                <td>{r.name}</td><td>{r.employeeId}</td><td>{r.status}</td><td>{r.date}</td><td>{r.timeIn}</td><td>{r.timeOut}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function LeavesTab({leaves}) {
-  return (
-    <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h3>Leaves</h3>
-        <button className="btn" onClick={()=>alert('Open apply leave form (demo)')}>Apply Leave</button>
-      </div>
-      <div className="card">
-        <table>
-          <thead><tr><th>Employee</th><th>From</th><th>To</th><th>Type</th><th>Status</th></tr></thead>
-          <tbody>{leaves.map((l,i)=>(<tr key={i}><td>{l.name}</td><td>{l.start}</td><td>{l.end}</td><td>{l.type}</td><td>{l.status}</td></tr>))}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function PayrollTab({payroll}) {
-  return (
-    <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h3>Payroll</h3>
-        <button className="btn" onClick={()=>alert('Run payroll (demo)')}>Run Payroll</button>
-      </div>
-      <div className="card">
-        <table>
-          <thead><tr><th>Employee</th><th>Pay Period</th><th>Gross</th><th>Net</th><th>Status</th></tr></thead>
-          <tbody>{payroll.map((p,i)=>(<tr key={i}><td>{p.name}</td><td>{p.period}</td><td>${p.gross}</td><td>${p.net}</td><td>{p.status}</td></tr>))}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function HTMTab({ htm }) {
-  return (
-    <div>
-      <h3>HTM Codes</h3>
-      <div className="card">
-        <table>
-          <thead><tr><th>Code</th><th>Description</th><th>Eligibility</th></tr></thead>
-          <tbody>{(htm||[]).map((h,i)=>(<tr key={i}><td>{h.code}</td><td>{h.description}</td><td>{h.eligibility}</td></tr>))}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function ProfileTab({employee}) {
-  if(!employee) return <div className="card">Employee not found</div>;
-  return (
-    <div>
-      <div className="card" style={{display:'flex', gap:16, alignItems:'center'}}>
-        <div style={{width:92,height:92,borderRadius:10, background:'#eef2ff', display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:22,color:'var(--accent)'}}>{(employee.name||'').split(' ').map(n=>n[0]).slice(0,2).join('')}</div>
-        <div>
-          <div style={{fontSize:18,fontWeight:700}}>{employee.name}</div>
-          <div className="muted">{employee.title} • {employee.location}</div>
-          <div style={{marginTop:8}} className="small">Email: {employee.email}</div>
-          <div className="small">Employee ID: {employee.id}</div>
-          <div style={{marginTop:8}}><strong>Leave Balance:</strong> {employee.leaveBalance} days</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <h4>Quick Actions</h4>
-        <div style={{display:'flex', gap:8, marginTop:8}}>
-          <button className="btn" onClick={()=>alert('Mark attendance (demo)')}>Mark Attendance</button>
-          <button className="btn" style={{background:'#06b6d4'}} onClick={()=>alert('Apply leave (demo)')}>Apply Leave</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ---------------------- Top-level App ---------------------- */
-function App() {
-  const [user, setUser] = useState(null); // store employeeId
-  const [activeTab, setActiveTab] = useState('Overview');
-  const [showForgot, setShowForgot] = useState(false);
-
-  // Data - now stateful to be replaced with live OneDrive values
-  const [employees, setEmployees] = useState([]);
-  const [attendance, setAttendance] = useState([]);
-  const [leaves, setLeaves] = useState([]);
-  const [payroll, setPayroll] = useState([]);
-  const [htm, setHtm] = useState([]);
-
-  async function loadLiveDataFor(employeeId) {
+  async function getToken() {
+    const accounts = msalInstance.getAllAccounts();
+    if(accounts.length === 0){
+      await msalInstance.loginPopup({ scopes: SCOPES });
+    }
+    const acc = msalInstance.getAllAccounts()[0];
     try {
-      if(typeof window.fetchOneDriveTable !== 'function') {
-        throw new Error('fetchOneDriveTable helper not available (see console).');
-      }
-
-      const empRows = await window.fetchOneDriveTable('employees').catch(()=>null);
-      if(empRows && empRows.length) {
-        setEmployees(empRows.map(r => ({
-          id: r.employeeId || r.EmployeeID || r['Employee ID'] || r.id || r.ID,
-          name: r.name || r.Name || r.FullName,
-          email: r.email || r.Email,
-          title: r.title || r.Title,
-          location: r.location || r.Location,
-          leaveBalance: r.leaveBalance || r.LeaveBalance || r.leave_balance || 0
-        })));
-      }
-
-      const attRows = await window.fetchOneDriveTable('attendance').catch(()=>null);
-      if(attRows && attRows.length) {
-        setAttendance(attRows.map(r=>({
-          employeeId: r.employeeId || r.EmployeeID || r['Employee ID'] || r.id,
-          name: r.name || r.Name,
-          date: r.date || r.Date,
-          status: r.status || r.Status,
-          timeIn: r.timeIn || r.TimeIn || r['Time In'] || '-',
-          timeOut: r.timeOut || r.TimeOut || r['Time Out'] || '-'
-        })));
-      }
-
-      const leavesRows = await window.fetchOneDriveTable('leaves').catch(()=>null);
-      if(leavesRows && leavesRows.length) {
-        setLeaves(leavesRows.map(r=>({
-          leaveId: r.leaveId || r.LeaveID || r['Leave ID'],
-          employeeId: r.employeeId || r.EmployeeID || r['Employee ID'],
-          name: r.name || r.Name,
-          start: r.startDate || r.Start || r.start,
-          end: r.endDate || r.End || r.end,
-          type: r.type || r.Type,
-          status: r.status || r.Status,
-          htmCode: r.htmCode || r.HTMCode
-        })));
-      }
-
-      const payrollRows = await window.fetchOneDriveTable('payroll').catch(()=>null);
-      if(payrollRows && payrollRows.length) {
-        setPayroll(payrollRows.map(r=>({
-          employeeId: r.employeeId || r.EmployeeID || r['Employee ID'],
-          name: r.name || r.Name,
-          period: r.period || (r.payPeriodStart && r.payPeriodEnd ? `${r.payPeriodStart} - ${r.payPeriodEnd}` : r.period),
-          gross: r.gross || r.Gross || 0,
-          net: r.net || r.Net || 0,
-          status: r.status || r.Status
-        })));
-      }
-
-      const htmRows = await window.fetchOneDriveTable('htm').catch(()=>null);
-      if(htmRows && htmRows.length) {
-        setHtm(htmRows.map(r=>({
-          code: r.code || r.Code || r.HTM || r['HTM Code'],
-          description: r.description || r.Description,
-          eligibility: r.eligibility || r.Eligibility
-        })));
-      }
+      const tr = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: acc });
+      return tr.accessToken;
     } catch (err) {
-      console.error('Live data load failed', err);
-      // keep arrays empty if load fails
+      const tr = await msalInstance.acquireTokenPopup({ scopes: SCOPES });
+      return tr.accessToken;
     }
   }
 
-  function handleLogin(employeeId){
-    setUser(employeeId);
-    setActiveTab('Overview');
-    setShowForgot(false);
-    loadLiveDataFor(employeeId);
-  }
-  function handleLogout(){ setUser(null); setActiveTab('Overview'); setShowForgot(false); }
+  window.fetchOneDriveTable = async function(tableKeyOrName){
+    if(!CLIENT_ID || CLIENT_ID.startsWith('REPLACE')) throw new Error('CLIENT_ID/TENANT_ID/REDIRECT_URI not configured');
+    const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
+    const token = await getToken();
+    const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
+    // columns
+    const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, { headers: { Authorization: 'Bearer ' + token }});
+    if(!colRes.ok){ const t = await colRes.text().catch(()=>''); throw new Error('Columns fetch failed: ' + colRes.status + ' ' + t); }
+    const colJson = await colRes.json();
+    const columns = (colJson.value||[]).map(c=>c.name);
+    // rows
+    const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, { headers: { Authorization: 'Bearer ' + token }});
+    if(!rowRes.ok){ const t = await rowRes.text().catch(()=>''); throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + t); }
+    const rowJson = await rowRes.json();
+    const rows = (rowJson.value||[]).map(r => {
+      const vals = (r.values && r.values[0]) ? r.values[0] : [];
+      const obj = {};
+      for(let i=0;i<columns.length;i++) obj[columns[i]] = vals[i] ?? null;
+      return obj;
+    });
+    return rows;
+  };
 
-  if(!user){
-    if(showForgot){
-      return <ForgotPassword onDone={()=>setShowForgot(false)} />;
-    }
-    return <LoginPage onLogin={handleLogin} onShowForgot={setShowForgot} />;
-  }
+  window.msalOneDrive = {
+    msalInstance,
+    loginPopup: async () => msalInstance.loginPopup({ scopes: SCOPES }),
+    getAccount: () => msalInstance.getAllAccounts()[0] || null
+  };
 
-  const employee = (employees.find(e => (e.id || '').toString().toLowerCase() === (user||'').toString().toLowerCase())) || { id:user, name: user, email:`${user}@example.com`, title:'Employee', location:'—', leaveBalance:0 };
-
-  return (
-    <div className="app">
-      <Sidebar current={activeTab} onSelect={setActiveTab} onLogout={handleLogout} />
-      <div className="main">
-        <div className="header">
-          <div>
-            <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard — Global</div>
-            <div className="muted">Central dashboard for attendance, leaves and payroll</div>
-          </div>
-          <div style={{display:'flex', gap:12, alignItems:'center'}}>
-            <div className="small muted">Locale: Global</div>
-            <button className="btn" onClick={()=>alert('Open quick login modal (demo)')}>Employee Login</button>
-          </div>
-        </div>
-
-        {/* Main content area */}
-        {activeTab === 'Overview' && <Overview employees={employees} attendance={attendance} leaves={leaves} payroll={payroll} />}
-        {activeTab === 'Attendance' && <AttendanceTab attendance={attendance} />}
-        {activeTab === 'Leaves' && <LeavesTab leaves={leaves} />}
-        {activeTab === 'Payroll' && <PayrollTab payroll={payroll} />}
-        {activeTab === 'HTM Codes' && <HTMTab htm={htm} />}
-        {activeTab === 'Profile' && <ProfileTab employee={employee} />}
-
-        <footer>
-          <div className="muted">Live — Data is read from OneDrive Excel (if available).</div>
-        </footer>
-      </div>
-    </div>
-  );
+  document.getElementById('statusLine').textContent = 'MSAL ready';
+  console.info('fetchOneDriveTable helper ready');
 }
 
-/* Render app */
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+/* -------------------- UI behaviour -------------------- */
+document.getElementById('signInBtn').addEventListener('click', async () => {
+  diag('');
+  document.getElementById('statusLine').textContent = 'Signing in and fetching live data...';
+  const id = document.getElementById('empId').value.trim();
+  const pw = document.getElementById('empPw').value;
+  if(!id || !pw) { diag('Enter ID and Password'); return; }
+
+  if(typeof window.fetchOneDriveTable !== 'function') {
+    diag('fetchOneDriveTable helper not available. See console for init errors.');
+    return;
+  }
+
+  try {
+    // load employees table live
+    const empRows = await window.fetchOneDriveTable('employees');
+    // find employee row match
+    const match = (empRows || []).find(r => {
+      const candidateId = (r.EmployeeId || r.EmployeeID || r['Employee ID'] || r['Employee Id'] || r.id || r.ID || '').toString().trim().toLowerCase();
+      const candidatePw = (r.password || r.Password || '').toString();
+      return candidateId === id.toLowerCase() && candidatePw === pw;
+    });
+
+    if(!match){
+      diag('Invalid Employee ID or Password (checked against Employees table)');
+      return;
+    }
+
+    // success
+    showDashboardFor(match);
+    document.getElementById('logoutBtn').style.display = 'inline-block';
+  } catch (err) {
+    console.error(err);
+    diag('Login failed: ' + (err.message || err));
+  } finally {
+    document.getElementById('statusLine').textContent = 'Ready';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  if(msalInstance){
+    msalInstance.logoutPopup().catch(()=>{}); // best-effort
+  }
+  window.location.reload();
+});
+
+/* Render dashboard (after successful login) */
+async function showDashboardFor(empRow){
+  document.getElementById('dashboardArea').style.display = 'block';
+  document.getElementById('welcome').textContent = `Welcome ${empRow.Name || empRow.name || empRow['Emp Name'] || ''}`;
+
+  // fetch other tables concurrently (attendance, leaves, etc.)
+  try {
+    const [attendanceRows, leavesRows, empRows, htmRows] = await Promise.all([
+      window.fetchOneDriveTable('attendance').catch(()=>[]),
+      window.fetchOneDriveTable('leaves').catch(()=>[]),
+      window.fetchOneDriveTable('employees').catch(()=>[]),
+      window.fetchOneDriveTable('htm').catch(()=>[])
+    ]);
+
+    // fill KPIs
+    document.getElementById('totalEmployees').textContent = (empRows || []).length;
+    document.getElementById('presentToday').textContent = (attendanceRows || []).filter(r => (r.Status||r.status) === 'Present').length;
+    document.getElementById('pendingLeaves').textContent = (leavesRows || []).filter(r => (r.Status||r.status) === 'Pending').length;
+
+    // attendance table
+    const attTbody = document.querySelector('#attendanceTable tbody');
+    attTbody.innerHTML = '';
+    (attendanceRows || []).slice(0,25).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.Name || r.name || r['Emp Name'] || ''}</td><td>${r.Status || r.status || ''}</td><td>${r['Time In'] || r.timeIn || r.CheckINTime || ''}</td><td>${r['Time Out'] || r.timeOut || r.CheckOUTTime || ''}</td>`;
+      attTbody.appendChild(tr);
+    });
+
+    // leaves table
+    const leavesTbody = document.querySelector('#leavesTable tbody');
+    leavesTbody.innerHTML = '';
+    (leavesRows || []).slice(0,25).forEach(r => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${r.Name || r.name || r['Emp Name'] || r['Employee'] || ''}</td><td>${r.Start || r.startDate || r['Start Date'] || ''}</td><td>${r.End || r.endDate || r['End Date'] || ''}</td><td>${r['Leave Type'] || r.LeaveType || r.type || ''}</td><td>${r.Status || r.status || r['Approval Decision'] || ''}</td>`;
+      leavesTbody.appendChild(tr);
+    });
+
+    // profile: show columns from employee row
+    const profileTbody = document.getElementById('profileTable');
+    profileTbody.innerHTML = '';
+    const profileFields = ['EmployeeId','Employee ID','Employee Id','Emp ID','Emp Name','Name','Email','DOJ','Date of Joining','Mobile','Designation','title','Title'];
+    profileFields.forEach(key => {
+      const val = empRow[key] || empRow[key.replace(/\s/g,'')] || empRow[key.toLowerCase()] || empRow[key.toUpperCase()];
+      if(val){
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<th style="width:180px">${key}</th><td>${val}</td>`;
+        profileTbody.appendChild(tr);
+      }
+    });
+
+    // hook apply/mark buttons (open external pages or popup)
+    document.getElementById('applyLeave').onclick = () => window.open('https://your-leave-form-url-or-drive-link', '_blank');
+    document.getElementById('markAttendance').onclick = () => window.open('https://your-attendance-form-url-or-drive-link', '_blank');
+
+  } catch (err) {
+    console.error('Dashboard load error', err);
+    diag('Failed to load dashboard data: ' + (err.message || err));
+  }
+}
+
+/* initialize msal + helpers immediately */
+initMsalAndHelpers();
 </script>
 
 </body>
