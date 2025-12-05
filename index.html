@@ -28,7 +28,6 @@
       color: #0f172a;
     }
 
-    /* Layout */
     .app {
       display: flex;
       min-height: 100vh;
@@ -215,16 +214,6 @@
       border-bottom: none;
     }
 
-    .pill-status {
-      display: inline-flex;
-      align-items: center;
-      border-radius: 999px;
-      font-size: 11px;
-      padding: 3px 8px;
-      background: #ecfdf5;
-      color: #047857;
-    }
-
     .search {
       padding: 7px 10px;
       border-radius: 999px;
@@ -278,7 +267,6 @@
       color: var(--muted);
     }
 
-    /* Login */
     .login-wrap {
       min-height: 100vh;
       display: flex;
@@ -335,10 +323,11 @@
 <body>
 <div id="root"></div>
 
-<!-- MSAL + Graph helper -->
-<script type="module">
-  import * as msal from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.esm.min.js";
+<!-- MSAL browser (same CDN as PO dashboard) -->
+<script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
 
+<!-- Graph / Excel helpers (NON-module, uses global msal) -->
+<script>
   // ====== YOUR CONFIG ======
   const CLIENT_ID    = "27917652-ca62-4409-b37c-e47df77bfce9";
   const TENANT_ID    = "93846c24-8666-4033-8b6e-901877a2cf98";
@@ -346,7 +335,6 @@
   const DRIVE_ID     = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
   const FILE_ID      = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
 
-  // Excel table names
   const TABLES = {
     employees: "Employees",
     attendance: "Attendance",
@@ -358,7 +346,7 @@
   const msalInstance = new msal.PublicClientApplication({
     auth: {
       clientId: CLIENT_ID,
-      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      authority: "https://login.microsoftonline.com/" + TENANT_ID,
       redirectUri: REDIRECT_URI
     },
     cache: { cacheLocation: "sessionStorage" }
@@ -387,16 +375,15 @@
     }
   }
 
-  // Fetch an Excel table as array of {col: value}
   window.fetchOneDriveTable = async function(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
-    const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
+    const base = "https://graph.microsoft.com/v1.0/drives/" + DRIVE_ID +
+                 "/items/" + FILE_ID + "/workbook";
 
-    // Columns
     const colRes = await fetch(
-      `${base}/tables/${encodeURIComponent(tableName)}/columns`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      base + "/tables/" + encodeURIComponent(tableName) + "/columns",
+      { headers: { Authorization: "Bearer " + token } }
     );
     if (!colRes.ok) {
       const t = await colRes.text().catch(() => "");
@@ -405,10 +392,9 @@
     const colJson = await colRes.json();
     const columns = (colJson.value || []).map(c => c.name);
 
-    // Rows
     const rowRes = await fetch(
-      `${base}/tables/${encodeURIComponent(tableName)}/rows`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      base + "/tables/" + encodeURIComponent(tableName) + "/rows",
+      { headers: { Authorization: "Bearer " + token } }
     );
     if (!rowRes.ok) {
       const t = await rowRes.text().catch(() => "");
@@ -441,23 +427,17 @@
 <script type="text/babel">
 const { useState, useEffect } = React;
 
-/* ===================== Helpers ===================== */
+/* ============ Helpers ============ */
 
 const normalizeFn = (s) => (s || "").toString().trim().toLowerCase();
 
-// Excel serial date -> dd-MMM-yyyy
 function formatExcelDate(raw) {
   if (raw === null || raw === undefined || raw === "") return "";
-
-  // if it's already a non-numeric string, just return
-  if (typeof raw === "string" && isNaN(Number(raw))) {
-    return raw;
-  }
+  if (typeof raw === "string" && isNaN(Number(raw))) return raw;
 
   const serial = Number(raw);
   if (!Number.isFinite(serial)) return String(raw);
 
-  // Excel's origin (1899-12-30)
   const base = new Date(Date.UTC(1899, 11, 30));
   base.setUTCDate(base.getUTCDate() + Math.floor(serial));
 
@@ -465,21 +445,17 @@ function formatExcelDate(raw) {
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const mon = months[base.getUTCMonth()];
   const year = base.getUTCFullYear();
-
   return `${day}-${mon}-${year}`;
 }
 
-// Excel time fraction -> HH:MM
 function formatExcelTime(raw) {
   if (raw === null || raw === undefined || raw === "") return "";
-
   const n = Number(raw);
   if (!Number.isFinite(n)) return String(raw);
 
   const totalMinutes = Math.round(n * 24 * 60);
   const hours = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-
   return `${String(hours).padStart(2,"0")}:${String(mins).padStart(2,"0")}`;
 }
 
@@ -490,15 +466,11 @@ function parseMoney(raw) {
   return Number.isFinite(n) ? n : 0;
 }
 
-/* ===================== Login Screen ===================== */
+/* ============ Login Screen ============ */
 
 function LoginScreen({ onSignedIn, error, loading }) {
   async function handleSignIn() {
-    try {
-      await onSignedIn();
-    } catch (e) {
-      console.error(e);
-    }
+    await onSignedIn();
   }
 
   return (
@@ -540,7 +512,7 @@ function LoginScreen({ onSignedIn, error, loading }) {
   );
 }
 
-/* ===================== Layout Components ===================== */
+/* ============ Layout Components ============ */
 
 function Sidebar({ activeTab, setActiveTab, employee, onLogout }) {
   const tabs = ["Overview", "Attendance", "Leaves", "Payroll", "HTM Codes", "Profile"];
@@ -586,15 +558,14 @@ function KPICard({ label, value }) {
   );
 }
 
-/* ===================== Tabs ===================== */
+/* ============ Tabs ============ */
+
+const DUMMY_HTM_CODES = [
+  { code: "HTM010", description: "Full-Time Annual Leave", eligibility: "All FT employees" },
+  { code: "HTM020", description: "Sick Leave", eligibility: "All employees" }
+];
 
 function OverviewTab({ attendance, leaves, payroll, employeeEmail }) {
-  const presentCount = attendance.filter(a =>
-    (a.status || "").toLowerCase() === "present" ||
-    (a.status || "").toLowerCase() === "ot" ||
-    (a.status || "").toLowerCase() === "lc"
-  ).length;
-
   const pendingLeaves = leaves.filter(l =>
     (l.status || "").toLowerCase().includes("pending")
   ).length;
@@ -732,15 +703,17 @@ function AttendanceTab({ attendance }) {
   const [filter, setFilter] = useState("All");
   const [q, setQ] = useState("");
 
+  const statuses = ["All", "Present", "OT", "LC", "WFH", "On Leave", "Absent"];
+
   const rows = attendance.filter(r => {
     const statusOk = filter === "All" || (r.status || "") === filter;
-    const hay = ( (r.name || "") + " " + (r.employeeEmail || "") + " " + (String(r.date) || "") )
-      .toLowerCase();
+    const hay = ( (r.name || "") + " " +
+                  (r.employeeEmail || "") + " " +
+                  String(r.date || "")
+                ).toLowerCase();
     const needle = q.toLowerCase();
     return statusOk && hay.includes(needle);
   });
-
-  const statuses = ["All", "Present", "OT", "LC", "WFH", "On Leave", "Absent"];
 
   return (
     <div>
@@ -981,13 +954,7 @@ function ProfileTab({ employee }) {
   );
 }
 
-/* Static HTM codes from Excel (mapped once in load) – we keep the array here so UI always has something */
-const DUMMY_HTM_CODES = [
-  { code: "HTM010", description: "Full-Time Annual Leave", eligibility: "All FT employees" },
-  { code: "HTM020", description: "Sick Leave", eligibility: "All employees" }
-];
-
-/* ===================== Main App ===================== */
+/* ============ Main App ============ */
 
 function App() {
   const [account, setAccount] = useState(null);
@@ -1021,32 +988,18 @@ function App() {
     const lowerEmail = normalizeFn(email);
 
     try {
-      // ----- Employees -----
       const empRows = await window.fetchOneDriveTable("employees").catch(() => []);
       let employeesMapped = empRows.map((r) => {
         const excelEmail = r["Email address"] || r["Email"] || r["Email ID"] || r.Email || "";
         const msEmail = r["Microsoft Email ID"] || r["Microsoft Email"] || "";
         return {
-          id:
-            r["Employee ID"] ||
-            r["Employee Id"] ||
-            r["EmployeeId"] ||
-            r.EmployeeID ||
-            "",
+          id: r["Employee ID"] || r["Employee Id"] || r["EmployeeId"] || r.EmployeeID || "",
           name: r["Emp Name"] || r["Name"] || "",
           email: excelEmail || msEmail || email,
           excelEmail,
           msEmail,
-          mobile:
-            r["Mobile"] ||
-            r["Phone"] ||
-            r["EmployeePh"] ||
-            "",
-          photoUrl:
-            r["Photo URL"] ||
-            r["Employee Photo"] ||
-            r["EmployeePhoto"] ||
-            null,
+          mobile: r["Mobile"] || r["Phone"] || r["EmployeePh"] || "",
+          photoUrl: r["Photo URL"] || r["Employee Photo"] || r["EmployeePhoto"] || null,
           leaveBalance: r["Leave Balance"] || r["LeaveBalance"] || 0
         };
       });
@@ -1072,46 +1025,28 @@ function App() {
 
       setEmployee(current);
 
-      // ----- Attendance -----
       const attRows = await window.fetchOneDriveTable("attendance").catch(() => []);
       let attendanceMapped = attRows.map((r) => ({
-        employeeEmail:
-          r["Email ID"] ||
-          r["Email"] ||
-          r.EmailID ||
-          r.Email ||
-          "",
+        employeeEmail: r["Email ID"] || r["Email"] || r.EmailID || r.Email || "",
         name: r["Emp Name"] || r["Name"] || "",
         date: formatExcelDate(r["Date"] ?? r.Date ?? ""),
         status: r["Status"] || r.Status || "",
         timeIn: formatExcelTime(
-          r["Check-IN Time"] ??
-          r["Check In Time"] ??
-          r.CheckINTime ??
-          ""
+          r["Check-IN Time"] ?? r["Check In Time"] ?? r.CheckINTime ?? ""
         ),
         timeOut: formatExcelTime(
-          r["Check-Out Time"] ??
-          r["Check Out Time"] ??
-          r.CheckOutTime ??
-          ""
+          r["Check-Out Time"] ?? r["Check Out Time"] ?? r.CheckOutTime ?? ""
         )
       }));
 
       attendanceMapped = attendanceMapped.filter(
         (a) => normalizeFn(a.employeeEmail) === lowerEmail
       );
-
       setAttendance(attendanceMapped);
 
-      // ----- Leaves -----
       const leavesRows = await window.fetchOneDriveTable("leaves").catch(() => []);
       let leavesMapped = leavesRows.map((r) => ({
-        employeeId:
-          r["Employee Id"] ||
-          r["Employee ID"] ||
-          r.EmployeeID ||
-          "",
+        employeeId: r["Employee Id"] || r["Employee ID"] || r.EmployeeID || "",
         name: r["Name"] || r["Emp Name"] || "",
         start: formatExcelDate(r["Start Date"] ?? r["Start"] ?? r.start),
         end: formatExcelDate(r["End Date"] ?? r["End Data"] ?? r.end),
@@ -1120,7 +1055,6 @@ function App() {
         paidDays: r["Paid Days"] || r["PaidDays"] || ""
       }));
 
-      // Match by Employee ID first, then by name
       const currentIdLower = normalizeFn(current.id);
       const currentNameLower = normalizeFn(current.name);
       leavesMapped = leavesMapped.filter((l) => {
@@ -1131,10 +1065,8 @@ function App() {
           (currentNameLower && nameLower === currentNameLower)
         );
       });
-
       setLeaves(leavesMapped);
 
-      // ----- Payroll -----
       const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => []);
       let payrollMapped = payrollRows.map((r) => ({
         employeeName: r["Employee"] || r["Emp Name"] || r.Name || "",
@@ -1171,8 +1103,8 @@ function App() {
     setActiveTab("Overview");
   }
 
-  // Auto-load if already signed in
   useEffect(() => {
+    if (!window.msalOneDrive) return;
     const acc = window.msalOneDrive.getAccount();
     if (acc && !account) {
       setAccount(acc);
@@ -1224,7 +1156,6 @@ function App() {
   );
 }
 
-/* Render */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 </body>
