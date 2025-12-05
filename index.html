@@ -4,6 +4,10 @@
   <meta charset="utf-8" />
   <title>Employee Dashboard - Demo</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- MSAL (global) -->
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+
   <style>
     :root{
       --bg:#f6f8fb; --card:#ffffff; --muted:#64748b;
@@ -113,18 +117,15 @@
 <body>
 <div id="root"></div>
 
-<!-- MSAL + OneDrive Graph helper (module) -->
-<script type="module">
-  import * as msal from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.esm.min.js";
-
-  /* ========= CONFIGURED WITH YOUR VALUES ========= */
+<!-- MSAL / Graph helper (non-module) -->
+<script>
+  /* ========= YOUR VALUES ========= */
   const CLIENT_ID   = "27917652-ca62-4409-b37c-e47df77bfce9";
   const TENANT_ID   = "93846c24-8666-4033-8b6e-901877a2cf98";
   const REDIRECT_URI= "https://gbslit.github.io/Employee_Dashboard/";
   const DRIVE_ID    = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
   const FILE_ID     = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
 
-  // Excel table names (must match exactly your workbook tables)
   const TABLES = {
     employees:  "Employees",
     attendance: "Attendance",
@@ -132,9 +133,8 @@
     payroll:    "Payroll",
     htm:        "HTM_LeaveCodes"
   };
-  /* =================================== */
 
-  const msalInstance = new msal.PublicClientApplication({
+  const msalConfig = {
     auth: {
       clientId: CLIENT_ID,
       authority: `https://login.microsoftonline.com/${TENANT_ID}`,
@@ -144,9 +144,11 @@
       cacheLocation: "localStorage",
       storeAuthStateInCookie: true
     }
-  });
+  };
 
   const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
+
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
 
   async function getToken() {
     let account = msalInstance.getAllAccounts()[0];
@@ -166,41 +168,41 @@
     }
   }
 
-  // fetch a table's columns & rows and return array of objects: [{col1: val, col2: val}, ...]
+  // Fetch Excel table and return array of objects
   window.fetchOneDriveTable = async function(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
     const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
-    // fetch columns
+
+    // columns
     const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if(!colRes.ok) {
-      const txt = await colRes.text().catch(()=>'');
-      throw new Error('Columns fetch failed: ' + colRes.status + ' ' + txt);
+      const txt = await colRes.text().catch(()=> '');
+      throw new Error("Columns fetch failed: " + colRes.status + " " + txt);
     }
     const colJson = await colRes.json();
     const columns = colJson.value.map(c => c.name);
 
-    // fetch rows
+    // rows
     const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if(!rowRes.ok) {
-      const txt = await rowRes.text().catch(()=>'');
-      throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + txt);
+      const txt = await rowRes.text().catch(()=> '');
+      throw new Error("Rows fetch failed: " + rowRes.status + " " + txt);
     }
     const rowJson = await rowRes.json();
     const rows = (rowJson.value || []).map(r => {
       const vals = (r.values && r.values[0]) ? r.values[0] : [];
       const obj = {};
-      for (let i=0;i<columns.length;i++) obj[columns[i]] = vals[i] ?? null;
+      for (let i=0; i<columns.length; i++) obj[columns[i]] = vals[i] ?? null;
       return obj;
     });
     return rows;
   };
 
-  // expose msal instance helper
   window.msalOneDrive = {
     msalInstance,
     async loginPopup() { return msalInstance.loginPopup({ scopes: SCOPES }); },
@@ -211,15 +213,13 @@
 <!-- React UMD -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<!-- Babel compiler -->
+<!-- Babel -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
 const { useState } = React;
 
-/* ---------------------------------------
-   Simple Microsoft login page
---------------------------------------- */
+/* ----------------- Login page ----------------- */
 function LoginPage({ onSignIn, error }) {
   return (
     <div className="login-wrap">
@@ -248,9 +248,7 @@ function LoginPage({ onSignIn, error }) {
   );
 }
 
-/* ---------------------------------------
-   Dashboard components (mostly unchanged)
---------------------------------------- */
+/* -------------- Sidebar & small components -------------- */
 function Sidebar({ current, onSelect, onLogout, user }) {
   const tabs = ['Overview','Attendance','Leaves','Payroll','HTM Codes','Profile'];
   return (
@@ -275,6 +273,7 @@ function KPICard({label, value}) {
   return <div className="kpi"><div className="label">{label}</div><div className="value">{value}</div></div>;
 }
 
+/* -------------- Tabs -------------- */
 function Overview({attendance, leaves, payroll}) {
   return (
     <div>
@@ -468,7 +467,7 @@ function ProfileTab({employee}) {
   );
 }
 
-/* ---------------------- Top-level App ---------------------- */
+/* ---------------------- App ---------------------- */
 function App() {
   const [user, setUser] = useState(null);          // { email, name }
   const [activeTab, setActiveTab] = useState('Overview');
@@ -657,7 +656,7 @@ function App() {
   );
 }
 
-/* Render app */
+/* Render */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 
