@@ -126,7 +126,10 @@
 <body>
 <div id="root"></div>
 
-<!-- MSAL + OneDrive Graph helper (module) -->
+<!-- ✅ LOAD MSAL LIBRARY (GLOBAL `msal`) -->
+<script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+
+<!-- MSAL + OneDrive Graph helper -->
 <script>
 /* ---------------------------------------------------------
    MICROSOFT LOGIN + GRAPH (NON-MODULE VERSION — WORKS ALWAYS)
@@ -216,7 +219,7 @@ window.msalOneDrive = {
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <!-- Babel compiler -->
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
 const { useState, useEffect } = React;
@@ -224,7 +227,6 @@ const { useState, useEffect } = React;
 /* ---------- Date / Time helpers ---------- */
 function formatExcelDate(value) {
   if (value == null || value === "") return "";
-  // If numeric (Excel serial)
   if (typeof value === "number") {
     const base = new Date(Date.UTC(1899, 11, 30));
     const date = new Date(base.getTime() + value * 86400000);
@@ -234,7 +236,6 @@ function formatExcelDate(value) {
       year: "numeric"
     });
   }
-  // If string, just show as dd-MMM-yy style already
   return String(value);
 }
 
@@ -617,7 +618,6 @@ function App() {
         name: r["Emp Name"] || r["Name"] || "",
         date: formatExcelDate(r["Date"] ?? r.Date ?? ""),
         status: r["Status"] || r.Status || "",
-        // >>>>> corrected mapping for your real column names <<<<<
         timeIn: formatExcelTime(
           r["Time_In"] ??
           r["Check-IN Time"] ??
@@ -770,4 +770,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
-
