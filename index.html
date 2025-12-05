@@ -2,8 +2,11 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Employee Dashboard - Live OneDrive Version</title>
+  <title>Employee Dashboard - Global</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!-- MSAL (global) -->
+  <script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
 
   <style>
     :root{
@@ -61,7 +64,6 @@
     }
 
     .muted { color:var(--muted); font-size:13px; }
-    .small { font-size:13px; color:var(--muted); }
 
     .btn {
       background:var(--accent); color:#fff;
@@ -83,9 +85,7 @@
       padding:28px; border-radius:16px;
       box-shadow: 0 12px 40px rgba(15,23,42,0.06);
     }
-
-    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
-    .input { padding:10px 12px; border-radius:10px; border:1px solid #e6eefb; }
+    .small { font-size:13px; color:var(--muted); }
 
     .tabbar { display:flex; gap:8px; margin-top:12px; }
     .tab {
@@ -99,20 +99,8 @@
       box-shadow:0 6px 18px rgba(37,99,235,0.06);
     }
 
-    .link-btn {
-      background:none; border:none; color:var(--accent);
-      cursor:pointer; padding:0; font-weight:600;
-    }
-
+    .link-btn { background:none; border:none; color:var(--accent); cursor:pointer; padding:0; font-weight:600; }
     footer { margin-top:24px; color:var(--muted); font-size:13px; }
-
-    .avatar {
-      width:92px; height:92px; border-radius:10px;
-      background:#eef2ff; display:flex; align-items:center;
-      justify-content:center; font-weight:700; font-size:28px;
-      color:var(--accent); overflow:hidden;
-    }
-    .avatar img{width:100%;height:100%;object-fit:cover;}
 
     @media (max-width:900px){
       .sidebar{display:none;}
@@ -126,108 +114,112 @@
 <body>
 <div id="root"></div>
 
-<!-- ✅ LOAD MSAL LIBRARY (GLOBAL `msal`) -->
-<script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
-
-<!-- MSAL + OneDrive Graph helper -->
+<!-- ========= MSAL / GRAPH HELPER (NON-MODULE) ========= -->
 <script>
-/* ---------------------------------------------------------
-   MICROSOFT LOGIN + GRAPH (NON-MODULE VERSION — WORKS ALWAYS)
----------------------------------------------------------- */
+  const CLIENT_ID    = "27917652-ca62-4409-b37c-e47df77bfce9";
+  const TENANT_ID    = "93846c24-8666-4033-8b6e-901877a2cf98";
+  const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/";
+  const DRIVE_ID     = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
+  const FILE_ID      = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
 
-const CLIENT_ID    = "27917652-ca62-4409-b37c-e47df77bfce9";
-const TENANT_ID    = "93846c24-8666-4033-8b6e-901877a2cf98";
-const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/";
-const DRIVE_ID     = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
-const FILE_ID      = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
+  const TABLES = {
+    employees:  "Employees",
+    attendance: "Attendance",
+    leaves:     "Leaves",
+    payroll:    "Payroll",
+    htm:        "HTM_LeaveCodes"
+  };
 
-const TABLES = {
-  employees: "Employees",
-  attendance: "Attendance",
-  leaves: "Leaves",
-  payroll: "Payroll",
-  htm: "HTM_LeaveCodes"
-};
+  const msalConfig = {
+    auth: {
+      clientId: CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: REDIRECT_URI
+    },
+    cache: {
+      cacheLocation: "localStorage",
+      storeAuthStateInCookie: true
+    }
+  };
 
-const msalConfig = {
-  auth: {
-    clientId: CLIENT_ID,
-    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-    redirectUri: REDIRECT_URI
-  },
-  cache: { cacheLocation: "sessionStorage" }
-};
+  const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
 
-const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-const msalInstance = new msal.PublicClientApplication(msalConfig);
-
-/* ---------- TOKEN ---------- */
-async function getToken() {
-  let acc = msalInstance.getAllAccounts()[0];
-  if (!acc) {
-    const loginResult = await msalInstance.loginPopup({ scopes: SCOPES });
-    acc = loginResult.account;
+  async function getToken() {
+    let account = msalInstance.getAllAccounts()[0];
+    if (!account) {
+      const loginResult = await msalInstance.loginPopup({ scopes: SCOPES });
+      account = loginResult.account;
+    }
+    try {
+      const tokenResponse = await msalInstance.acquireTokenSilent({
+        scopes: SCOPES,
+        account
+      });
+      return tokenResponse.accessToken;
+    } catch (e) {
+      const tokenResponse = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account });
+      return tokenResponse.accessToken;
+    }
   }
-  try {
-    const t = await msalInstance.acquireTokenSilent({ scopes: SCOPES, account: acc });
-    return t.accessToken;
-  } catch {
-    const t = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account: acc });
-    return t.accessToken;
-  }
-}
 
-/* ---------- FETCH ONE TABLE ---------- */
-window.fetchOneDriveTable = async function (tableKeyOrName) {
-  const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
-  const token = await getToken();
+  // Fetch Excel table and return array of objects
+  window.fetchOneDriveTable = async function(tableKeyOrName) {
+    const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
+    const token = await getToken();
+    const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
 
-  const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
+    // columns
+    const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(!colRes.ok) {
+      const txt = await colRes.text().catch(()=> '');
+      throw new Error("Columns fetch failed: " + colRes.status + " " + txt);
+    }
+    const colJson = await colRes.json();
+    const columns = colJson.value.map(c => c.name);
 
-  const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
+    // rows
+    const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(!rowRes.ok) {
+      const txt = await rowRes.text().catch(()=> '');
+      throw new Error("Rows fetch failed: " + rowRes.status + " " + txt);
+    }
+    const rowJson = await rowRes.json();
+    const rows = (rowJson.value || []).map(r => {
+      const vals = (r.values && r.values[0]) ? r.values[0] : [];
+      const obj = {};
+      for (let i=0; i<columns.length; i++) obj[columns[i]] = vals[i] ?? null;
+      return obj;
+    });
+    return rows;
+  };
 
-  const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-
-  const colJson = await colRes.json();
-  const rowJson = await rowRes.json();
-
-  const columns = colJson.value.map(c => c.name);
-
-  return rowJson.value.map(r => {
-    const vals = r.values[0];
-    const obj = {};
-    columns.forEach((c, i) => obj[c] = vals[i]);
-    return obj;
-  });
-};
-
-/* ---------- EXPOSE LOGIN HELPERS ---------- */
-window.msalOneDrive = {
-  loginPopup: () => msalInstance.loginPopup({ scopes: SCOPES }),
-  getAccount: () => msalInstance.getAllAccounts()[0] || null,
-  logout: () => msalInstance.logoutPopup()
-};
-
+  window.msalOneDrive = {
+    msalInstance,
+    async loginPopup() { return msalInstance.loginPopup({ scopes: SCOPES }); },
+    getAccount() { return msalInstance.getAllAccounts()[0] || null; }
+  };
 </script>
 
 <!-- React UMD -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-<!-- Babel compiler -->
-script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Babel -->
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState } = React;
 
-/* ---------- Date / Time helpers ---------- */
+/* ---------- Excel Date / Time Helpers (NEW) ---------- */
 function formatExcelDate(value) {
-  if (value == null || value === "") return "";
+  if (value === null || value === undefined || value === "") return "";
   if (typeof value === "number") {
+    // Excel serial, with 1899-12-30 base
     const base = new Date(Date.UTC(1899, 11, 30));
     const date = new Date(base.getTime() + value * 86400000);
     return date.toLocaleDateString("en-GB", {
@@ -236,42 +228,29 @@ function formatExcelDate(value) {
       year: "numeric"
     });
   }
+  // Already a string - just show it
   return String(value);
 }
 
 function formatExcelTime(value) {
-  if (value == null || value === "") return "";
+  if (value === null || value === undefined || value === "") return "";
   if (typeof value === "number") {
-    let totalSeconds = Math.round(value * 24 * 60 * 60);
-    let hours = Math.floor(totalSeconds / 3600);
-    let minutes = Math.floor((totalSeconds % 3600) / 60);
-    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
+    const totalSeconds = Math.round(value * 24 * 60 * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return String(hours).padStart(2,"0") + ":" + String(minutes).padStart(2,"0");
   }
   return String(value);
 }
 
-/* ---------- UI components ---------- */
-
-function LoginPage({ onSignedIn }) {
-  const [error, setError] = useState("");
-
-  async function handleSignIn() {
-    try {
-      setError("");
-      const account = await window.msalOneDrive.loginPopup();
-      onSignedIn(account);
-    } catch (e) {
-      console.error(e);
-      setError("Microsoft sign-in failed. See console for details.");
-    }
-  }
-
+/* ------------ Login Card ------------ */
+function LoginPage({ onSignIn, error }) {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard</div>
-          <div className="small">Sign in with Microsoft 365</div>
+        <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
+          <div style={{fontSize:20,fontWeight:700}}>Employee Dashboard</div>
+          <div style={{color:'var(--muted)',fontSize:13}}>Sign in with Microsoft 365</div>
         </div>
 
         <h2 style={{marginTop:6}}>Sign in</h2>
@@ -280,16 +259,18 @@ function LoginPage({ onSignedIn }) {
         </p>
 
         {error && (
-          <div style={{color:"#dc2626",fontSize:13,marginTop:10,marginBottom:10}}>
+          <div style={{color:'#dc2626',fontSize:13,marginTop:10}}>
             {error}
           </div>
         )}
 
-        <button className="btn" style={{width:"100%",marginTop:16}} onClick={handleSignIn}>
-          Sign in with Microsoft 365
-        </button>
+        <div style={{marginTop:18}}>
+          <button type="button" className="btn" onClick={onSignIn} style={{width:'100%'}}>
+            Sign in with Microsoft 365
+          </button>
+        </div>
 
-        <footer style={{marginTop:18}} className="small muted">
+        <footer style={{marginTop:16}} className="small muted">
           Your email is only used to match your row in the Employees Excel table.
         </footer>
       </div>
@@ -297,21 +278,29 @@ function LoginPage({ onSignedIn }) {
   );
 }
 
-function Sidebar({ current, onSelect, onLogout, email }) {
-  const tabs = ["Overview","Attendance","Leaves","Payroll","HTM Codes","Profile"];
+/* ------------ Sidebar ------------ */
+function Sidebar({ current, onSelect, onLogout, user }) {
+  const tabs = ['Overview','Attendance','Leaves','Payroll','HTM Codes','Profile'];
   return (
     <div className="sidebar">
       <div className="logo">Acme Corp</div>
       <div className="muted">Employee Dashboard</div>
       <div className="nav">
         {tabs.map(t=>(
-          <button key={t} className={current===t ? "active" : ""} onClick={()=>onSelect(t)}>{t}</button>
+          <button
+            key={t}
+            className={current===t ? 'active' : ''}
+            onClick={()=>onSelect(t)}
+          >
+            {t}
+          </button>
         ))}
       </div>
-      <div style={{marginTop:"auto", marginBottom:8}} className="small muted">
-        Signed in as <strong>GBSL IT</strong><br />{email}
+      <div style={{marginTop:'auto', marginBottom:8}} className="small muted">
+        Signed in as <strong>{user?.name || user?.email || 'Employee'}</strong><br/>
+        <span>{user?.email}</span>
       </div>
-      <button onClick={onLogout} className="btn" style={{width:"100%"}}>Sign out</button>
+      <button onClick={onLogout} className="btn" style={{width:'100%'}}>Sign out</button>
     </div>
   );
 }
@@ -325,16 +314,13 @@ function KPICard({label, value}) {
   );
 }
 
-function Overview({attendance, leaves, payroll, htm}) {
-  const latestAttendance = attendance.slice(0, 10);
-  const latestLeaves = leaves.slice(0, 10);
-  const latestPayroll = payroll.slice(0, 5);
-
+/* ------------ Tabs ------------ */
+function Overview({attendance, leaves, payroll}) {
   return (
     <div>
       <div className="kpi-row">
         <KPICard label="My Attendance Records" value={attendance.length} />
-        <KPICard label="My Pending Leaves" value={leaves.filter(l => (l.status || "").toLowerCase() !== "approved").length} />
+        <KPICard label="My Pending Leaves" value={leaves.filter(l=>l.status==='Pending').length} />
         <KPICard label="My Payroll Entries" value={payroll.length} />
       </div>
 
@@ -348,12 +334,12 @@ function Overview({attendance, leaves, payroll, htm}) {
                 <tr><th>Date</th><th>Status</th><th>Time In</th><th>Time Out</th></tr>
               </thead>
               <tbody>
-                {latestAttendance.map((r,i)=>(
+                {attendance.map((r,i)=>(
                   <tr key={i}>
-                    <td>{r.date || "-"}</td>
-                    <td>{r.status || "-"}</td>
-                    <td>{r.timeIn || "-"}</td>
-                    <td>{r.timeOut || "-"}</td>
+                    <td>{r.date}</td>
+                    <td>{r.status}</td>
+                    <td>{r.timeIn}</td>
+                    <td>{r.timeOut}</td>
                   </tr>
                 ))}
               </tbody>
@@ -368,7 +354,7 @@ function Overview({attendance, leaves, payroll, htm}) {
                 <tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {latestLeaves.map((l,i)=>(
+                {leaves.map((l,i)=>(
                   <tr key={i}>
                     <td>{l.start}</td>
                     <td>{l.end}</td>
@@ -386,9 +372,11 @@ function Overview({attendance, leaves, payroll, htm}) {
             <strong>Payroll Summary</strong>
             <p className="muted">Your payroll history</p>
             <table>
-              <thead><tr><th>Period</th><th>Net</th><th>Status</th></tr></thead>
+              <thead>
+                <tr><th>Period</th><th>Net</th><th>Status</th></tr>
+              </thead>
               <tbody>
-                {latestPayroll.map((p,i)=>(
+                {payroll.map((p,i)=>(
                   <tr key={i}>
                     <td>{p.period}</td>
                     <td>{p.net}</td>
@@ -403,14 +391,12 @@ function Overview({attendance, leaves, payroll, htm}) {
             <strong>HTM Codes</strong>
             <p className="muted">Leave code mapping (static)</p>
             <table>
-              <thead><tr><th>Code</th><th>Desc</th></tr></thead>
+              <thead>
+                <tr><th>Code</th><th>Desc</th></tr>
+              </thead>
               <tbody>
-                {htm.map((h,i)=>(
-                  <tr key={i}>
-                    <td>{h.code}</td>
-                    <td>{h.description}</td>
-                  </tr>
-                ))}
+                <tr><td>HTM010</td><td>Full-Time Annual Leave</td></tr>
+                <tr><td>HTM020</td><td>Sick Leave</td></tr>
               </tbody>
             </table>
           </div>
@@ -421,30 +407,43 @@ function Overview({attendance, leaves, payroll, htm}) {
 }
 
 function AttendanceTab({attendance}) {
-  const [filter, setFilter] = useState("All");
-  const [q, setQ] = useState("");
-  const rows = attendance.filter(r => {
-    const matchesFilter = filter === "All" || (r.status || "") === filter;
-    const text = `${r.name || ""} ${r.employeeId || ""} ${r.date || ""}`.toLowerCase();
-    return matchesFilter && text.includes(q.toLowerCase());
-  });
+  const [filter, setFilter] = useState('All');
+  const [q, setQ] = useState('');
+
+  const rows = attendance.filter(r =>
+    (filter==='All' || r.status===filter) &&
+    (r.date || '').toLowerCase().includes(q.toLowerCase())
+  );
 
   return (
     <div>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <div className="tabbar">
-          {["All","Present","WFH","On Leave","Absent","OT","LC","H"].map(t=>(
-            <div key={t} className={`tab ${t===filter?'active':''}`} onClick={()=>setFilter(t)}>{t}</div>
+          {['All','Present','WFH','On Leave','Absent'].map(t=>(
+            <div
+              key={t}
+              className={`tab ${t===filter?'active':''}`}
+              onClick={()=>setFilter(t)}
+            >
+              {t}
+            </div>
           ))}
         </div>
         <div>
-          <input className="search" placeholder="Search by date or status" value={q} onChange={e=>setQ(e.target.value)} />
+          <input
+            className="search"
+            placeholder="Search by date"
+            value={q}
+            onChange={(e)=>setQ(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="card" style={{marginTop:12}}>
         <table>
-          <thead><tr><th>Date</th><th>Status</th><th>In</th><th>Out</th></tr></thead>
+          <thead>
+            <tr><th>Date</th><th>Status</th><th>In</th><th>Out</th></tr>
+          </thead>
           <tbody>
             {rows.map((r,i)=>(
               <tr key={i}>
@@ -464,13 +463,15 @@ function AttendanceTab({attendance}) {
 function LeavesTab({leaves}) {
   return (
     <div>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
-        <h3>Leaves</h3>
-        <button className="btn" onClick={()=>alert("Open apply leave form (demo)")}>Apply Leave</button>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+        <h3>My Leaves</h3>
+        <button className="btn" onClick={()=>alert('Apply leave (future feature)')}>Apply Leave</button>
       </div>
       <div className="card">
         <table>
-          <thead><tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr></thead>
+          <thead>
+            <tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
+          </thead>
           <tbody>
             {leaves.map((l,i)=>(
               <tr key={i}>
@@ -490,13 +491,15 @@ function LeavesTab({leaves}) {
 function PayrollTab({payroll}) {
   return (
     <div>
-      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
         <h3>Payroll</h3>
-        <button className="btn" onClick={()=>alert("Run payroll (demo)")}>Run Payroll</button>
+        <button className="btn" onClick={()=>alert('Run payroll (admin feature)')}>Run Payroll</button>
       </div>
       <div className="card">
         <table>
-          <thead><tr><th>Pay Period</th><th>Gross</th><th>Net</th><th>Status</th></tr></thead>
+          <thead>
+            <tr><th>Pay Period</th><th>Gross</th><th>Net</th><th>Status</th></tr>
+          </thead>
           <tbody>
             {payroll.map((p,i)=>(
               <tr key={i}>
@@ -513,21 +516,18 @@ function PayrollTab({payroll}) {
   );
 }
 
-function HTMTab({htm}) {
+function HTMTab() {
   return (
     <div>
-      <h3>HTM Codes</h3>
+      <h3>HTM Codes (Static)</h3>
       <div className="card">
         <table>
-          <thead><tr><th>Code</th><th>Description</th><th>Eligibility</th></tr></thead>
+          <thead>
+            <tr><th>Code</th><th>Description</th><th>Eligibility</th></tr>
+          </thead>
           <tbody>
-            {htm.map((h,i)=>(
-              <tr key={i}>
-                <td>{h.code}</td>
-                <td>{h.description}</td>
-                <td>{h.eligibility}</td>
-              </tr>
-            ))}
+            <tr><td>HTM010</td><td>Full-Time Annual Leave</td><td>All FT employees</td></tr>
+            <tr><td>HTM020</td><td>Sick Leave</td><td>All employees</td></tr>
           </tbody>
         </table>
       </div>
@@ -536,223 +536,340 @@ function HTMTab({htm}) {
 }
 
 function ProfileTab({employee}) {
-  if (!employee) return <div className="card">Employee not found</div>;
+  if(!employee) {
+    return <div className="card">Employee not found in Excel. Check Employees table for your email.</div>;
+  }
+
   const initials = employee.name
-    ? employee.name.split(" ").map(n=>n[0]).slice(0,2).join("")
-    : "NA";
+    ? employee.name.split(' ').map(n=>n[0]).slice(0,2).join('')
+    : '';
 
   return (
     <div>
-      <div className="card" style={{display:"flex", gap:16, alignItems:"center"}}>
-        <div className="avatar">
-          {employee.photoUrl
-            ? <img src={employee.photoUrl} alt="Profile" />
-            : initials}
+      <div className="card" style={{display:'flex', gap:16, alignItems:'center'}}>
+        <div style={{
+          width:92,
+          height:92,
+          borderRadius:10,
+          background:'#eef2ff',
+          display:'flex',
+          alignItems:'center',
+          justifyContent:'center',
+          fontWeight:700,
+          fontSize:22,
+          color:'var(--accent)',
+          overflow:'hidden'
+        }}>
+          {employee.photoUrl ? (
+            <img
+              src={employee.photoUrl}
+              alt={employee.name}
+              style={{width:'100%',height:'100%',objectFit:'cover'}}
+            />
+          ) : (
+            initials
+          )}
         </div>
         <div>
           <div style={{fontSize:18,fontWeight:700}}>{employee.name}</div>
-          <div className="muted">Employee • —</div>
+          <div className="muted">{employee.title || 'Employee'} • {employee.location || '—'}</div>
           <div style={{marginTop:8}} className="small">Email: {employee.email}</div>
           <div className="small">Employee ID: {employee.id}</div>
-          <div className="small">Mobile: {employee.mobile || "—"}</div>
+          {employee.mobile && (
+            <div className="small">Mobile: {employee.mobile}</div>
+          )}
           <div style={{marginTop:8}}>
-            <strong>Leave Balance:</strong> {employee.leaveBalance || 0} days
+            <strong>Leave Balance:</strong> {employee.leaveBalance} days
           </div>
         </div>
       </div>
 
       <div className="card">
         <h4>Quick Actions</h4>
-        <div style={{display:"flex", gap:8, marginTop:8}}>
-          <button className="btn" onClick={()=>alert("Mark attendance (demo)")}>Mark Attendance</button>
-          <button className="btn" style={{background:"#06b6d4"}} onClick={()=>alert("Apply leave (demo)")}>Apply Leave</button>
+        <div style={{display:'flex', gap:8, marginTop:8}}>
+          <button className="btn" onClick={()=>alert('Mark attendance (future)')}>Mark Attendance</button>
+          <button className="btn" style={{background:'#06b6d4'}} onClick={()=>alert('Apply leave (future)')}>Apply Leave</button>
         </div>
-      </div>
-      <div className="small muted" style={{marginTop:16}}>
-        Live data from OneDrive Excel — rows are restricted to your email account.
       </div>
     </div>
   );
 }
 
-/* ---------- Top-level App ---------- */
+/* ------------ App ------------ */
 function App() {
-  const [account, setAccount] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("Overview");
-
+  const [user, setUser] = useState(null);          // { email, name }
+  const [activeTab, setActiveTab] = useState('Overview');
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [payroll, setPayroll] = useState([]);
-  const [htm, setHtm] = useState([]);
+  const [currentEmployee, setCurrentEmployee] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  async function loadLiveDataForAccount(acc) {
-    if (!acc) return;
-    setLoading(true);
+  function normalize(str) {
+    return (str || '').toString().trim().toLowerCase();
+  }
+
+  async function handleMsSignIn() {
     try {
-      const emailLower = (acc.username || "").toLowerCase();
-
-      // Employees
-      const empRows = await window.fetchOneDriveTable("employees").catch(() => []);
-      const mappedEmp = empRows.map(r => ({
-        id: r["Employee ID"] || r["EmployeeId"] || r["ID"],
-        email: r["Email address"] || r["Email"] || r["Microsoft Email ID"] || "",
-        name: r["Emp Name"] || r["Name"] || "",
-        mobile: r["Mobile"] || r["Phone"] || "",
-        photoUrl: r["EmployeePhoto"] || r["Employee Photo"] || ""
-      }));
-      setEmployees(mappedEmp);
-
-      const me = mappedEmp.find(e => (e.email || "").toLowerCase() === emailLower) || null;
-
-      // Attendance
-      const attRows = await window.fetchOneDriveTable("attendance").catch(() => []);
-      let attendanceMapped = attRows.map((r) => ({
-        employeeEmail:
-          r["Email ID"] ||
-          r["Email"] ||
-          r.EmailID ||
-          r.Email ||
-          "",
-        name: r["Emp Name"] || r["Name"] || "",
-        date: formatExcelDate(r["Date"] ?? r.Date ?? ""),
-        status: r["Status"] || r.Status || "",
-        timeIn: formatExcelTime(
-          r["Time_In"] ??
-          r["Check-IN Time"] ??
-          r["Check In Time"] ??
-          r.CheckINTime ??
-          ""
-        ),
-        timeOut: formatExcelTime(
-          r["Time_Out"] ??
-          r["Check-Out Time"] ??
-          r["Check Out Time"] ??
-          r.CheckOutTime ??
-          ""
-        )
-      }));
-      attendanceMapped = attendanceMapped.filter(r =>
-        (r.employeeEmail || "").toLowerCase() === emailLower
-      );
-      setAttendance(attendanceMapped);
-
-      const displayName = me ? me.name : "";
-
-      // Leaves
-      const leavesRows = await window.fetchOneDriveTable("leaves").catch(() => []);
-      let leavesMapped = leavesRows.map(r => ({
-        employeeId: r["Employee Id"] || r["EmployeeID"] || r["Employee Id"],
-        name: r["Name"] || "",
-        start: formatExcelDate(r["Start Date"] ?? r["Start"] ?? r["start"]),
-        end: formatExcelDate(r["End Date"] ?? r["End"] ?? r["end"]),
-        type: r["Leave Type"] || r["Type"] || "",
-        status: r["Approval Decision"] || r["Status"] || "",
-        days: r["Approved Number of days"] || r["Paid Days"] || 0
-      }));
-      if (displayName) {
-        leavesMapped = leavesMapped.filter(l => (l.name || "").toLowerCase() === displayName.toLowerCase());
+      setError('');
+      await window.msalOneDrive.loginPopup();
+      const account = window.msalOneDrive.getAccount();
+      if (!account) {
+        setError('Unable to get Microsoft account after login.');
+        return;
       }
-      setLeaves(leavesMapped);
+      const email =
+        (account.username ||
+         account.email ||
+         (account.idTokenClaims && account.idTokenClaims.preferred_username) ||
+         '').toLowerCase();
 
-      // Payroll
-      const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => []);
-      let payrollMapped = payrollRows.map(r => ({
-        employee: r["Employee"] || r["Name"] || "",
-        period: r["Pay Period"] || r["Period"] || "",
-        gross: r["Gross"] || "",
-        net: r["Net"] || "",
-        status: r["Status"] || ""
-      }));
-      if (displayName) {
-        payrollMapped = payrollMapped.filter(p => (p.employee || "").toLowerCase() === displayName.toLowerCase());
+      const name = account.name || email;
+      setUser({ email, name });
+      setActiveTab('Overview');
+
+      await loadLiveDataFor(email, normalize, {
+        setLoading,
+        setError,
+        setEmployees,
+        setCurrentEmployee,
+        setAttendance,
+        setLeaves,
+        setPayroll
+      });
+    } catch (e) {
+      console.error(e);
+      setError('Microsoft sign-in failed. See console for details.');
+    }
+  }
+
+  async function loadLiveDataFor(userEmail, normalizeFn, setters) {
+    const {
+      setLoading,
+      setError,
+      setEmployees,
+      setCurrentEmployee,
+      setAttendance,
+      setLeaves,
+      setPayroll
+    } = setters;
+
+    try {
+      setLoading(true);
+      setError("");
+
+      const lowerEmail = normalizeFn(userEmail);
+      let me = null;
+
+      /* ===== 1) EMPLOYEES TABLE ===== */
+      const empRows = await window.fetchOneDriveTable("employees").catch(() => null);
+
+      if (empRows && empRows.length) {
+        const mappedEmps = empRows.map((r) => {
+          const id =
+            r["Employee ID"] ||
+            r.EmployeeID ||
+            r.employeeId ||
+            r["Employee Id"] ||
+            null;
+
+          const primaryEmail =
+            r["Microsoft Email ID"] ||
+            r["Microsoft Email"] ||
+            r.MicrosoftEmailID ||
+            null;
+
+          const altEmail =
+            r["Email address"] ||
+            r["Email Address"] ||
+            r.Email ||
+            r.email ||
+            null;
+
+          return {
+            id,
+            name: r["Emp Name"] || r.EmpName || r.Name || "",
+            email: (primaryEmail || altEmail || "").toString().trim(),
+            primaryEmail: (primaryEmail || "").toString().trim(),
+            altEmail: (altEmail || "").toString().trim(),
+            title: "",
+            location: "",
+            leaveBalance: 0,
+            photoUrl:
+              r["Employee Photo"] ||
+              r["EmployeePhoto"] ||
+              r["Photo URL"] ||
+              r.PhotoUrl ||
+              null,
+            doj: r.DOJ || r["DOJ"] || null,
+            mobile: r.Mobile || r["Mobile"] || null
+          };
+        });
+
+        me =
+          mappedEmps.find(e => normalizeFn(e.primaryEmail) === lowerEmail) ||
+          mappedEmps.find(e => normalizeFn(e.altEmail) === lowerEmail) ||
+          null;
+
+        setEmployees(mappedEmps);
+        if (me) {
+          me = { ...me, email: me.email || me.primaryEmail || me.altEmail };
+          setCurrentEmployee(me);
+        } else {
+          console.warn(
+            "No employee row matching email:",
+            lowerEmail,
+            "Check Employees table 'Microsoft Email ID' / 'Email address' columns."
+          );
+        }
       }
-      setPayroll(payrollMapped);
 
-      // HTM codes
-      const htmRows = await window.fetchOneDriveTable("htm").catch(() => []);
-      const htmMapped = htmRows.map(r => ({
-        code: r["Code"] || "",
-        description: r["Description"] || "",
-        eligibility: r["Eligibility"] || ""
-      }));
-      setHtm(htmMapped);
+      const myId = me && me.id ? normalizeFn(me.id) : null;
+      const myName = me && me.name ? normalizeFn(me.name) : null;
 
+      /* ===== 2) ATTENDANCE TABLE ===== */
+      const attRows = await window.fetchOneDriveTable("attendance").catch(() => null);
+      if (attRows && attRows.length) {
+        let mapped = attRows.map((r) => {
+          const rawDate =
+            r["Date"] ||
+            r.Date ||
+            "";
+
+          const rawTimeIn =
+            r["Time_In"] ||
+            r["Check-IN Time"] ||
+            r["Check In Time"] ||
+            r.CheckINTime ||
+            "";
+
+          const rawTimeOut =
+            r["Time_Out"] ||
+            r["Check-Out Time"] ||
+            r["Check Out Time"] ||
+            r.CheckOutTime ||
+            "";
+
+          return {
+            employeeEmail:
+              r["Email ID"] ||
+              r["Email"] ||
+              r.EmailID ||
+              r.Email ||
+              "",
+            name: r["Emp Name"] || r.EmpName || "",
+            date: formatExcelDate(rawDate),
+            status: r["Status"] || r.Status || "",
+            timeIn: formatExcelTime(rawTimeIn),
+            timeOut: formatExcelTime(rawTimeOut)
+          };
+        });
+
+        if (lowerEmail) {
+          mapped = mapped.filter(
+            (a) => normalizeFn(a.employeeEmail) === lowerEmail
+          );
+        }
+
+        setAttendance(mapped);
+      }
+
+      /* ===== 3) LEAVES TABLE ===== */
+      const leavesRows = await window.fetchOneDriveTable("leaves").catch(() => null);
+      if (leavesRows && leavesRows.length) {
+        let mapped = leavesRows.map((r) => ({
+          employeeId:
+            r["Employee Id"] ||
+            r["Employee ID"] ||
+            r.EmployeeId ||
+            r.EmployeeID ||
+            null,
+          name: r["Name"] || r.Name || "",
+          start: formatExcelDate(
+            r["Start Date"] || r.StartDate || r.Start || ""
+          ),
+          end: formatExcelDate(
+            r["End Date"] || r.EndDate || r.End || ""
+          ),
+          type: r["Leave Type"] || r.LeaveType || "",
+          status: r["Approval Decision"] || r.ApprovalDecision || "",
+          paidDays: r["Paid Days"] || r.PaidDays || ""
+        }));
+
+        if (myId) {
+          mapped = mapped.filter(
+            (l) => normalizeFn(l.employeeId) === myId
+          );
+        }
+
+        setLeaves(mapped);
+      }
+
+      /* ===== 4) PAYROLL TABLE ===== */
+      const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => null);
+      if (payrollRows && payrollRows.length) {
+        let mapped = payrollRows.map((r) => ({
+          name: r["Employee"] || r.Name || "",
+          period: r["Pay Period"] || r.PayPeriod || "",
+          gross: r["Gross"] || r.Gross || 0,
+          net: r["Net"] || r.Net || 0,
+          status: r["Status"] || r.Status || ""
+        }));
+
+        if (myName) {
+          mapped = mapped.filter(
+            (p) => normalizeFn(p.name) === myName
+          );
+        }
+
+        setPayroll(mapped);
+      }
     } catch (err) {
       console.error("Live data load failed", err);
+      setError("Error loading data from Excel. Check console for details.");
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => {
-    const acc = window.msalOneDrive.getAccount();
-    if (acc) {
-      setAccount(acc);
-      loadLiveDataForAccount(acc);
-    }
-  }, []);
-
-  async function handleSignedIn(acc) {
-    setAccount(acc);
-    setActiveTab("Overview");
-    await loadLiveDataForAccount(acc);
-  }
-
-  async function handleLogout() {
-    await window.msalOneDrive.logout();
-    setAccount(null);
+  function handleLogout() {
+    setUser(null);
+    setCurrentEmployee(null);
+    setEmployees([]);
     setAttendance([]);
     setLeaves([]);
     setPayroll([]);
-    setEmployees([]);
-    setHtm([]);
+    setActiveTab('Overview');
   }
 
-  if (!account) {
-    return <LoginPage onSignedIn={handleSignedIn} />;
+  if (!user) {
+    return <LoginPage onSignIn={handleMsSignIn} error={error} />;
   }
 
-  const me = employees.find(e => (e.email || "").toLowerCase() === (account.username || "").toLowerCase()) || null;
+  const employee = currentEmployee || (employees.length ? employees[0] : null);
 
   return (
     <div className="app">
-      <Sidebar
-        current={activeTab}
-        onSelect={setActiveTab}
-        onLogout={handleLogout}
-        email={account.username}
-      />
+      <Sidebar current={activeTab} onSelect={setActiveTab} onLogout={handleLogout} user={user} />
       <div className="main">
         <div className="header">
           <div>
             <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard — Personal View</div>
-            <div className="muted">Data filtered for <strong>{account.username}</strong></div>
+            <div className="muted">Data filtered for <strong>{user.email}</strong></div>
           </div>
-          <div style={{display:"flex", gap:12, alignItems:"center"}}>
+          <div style={{display:'flex', gap:12, alignItems:'center'}}>
             {loading && <div className="small muted">Refreshing data…</div>}
           </div>
         </div>
 
-        {activeTab === "Overview" && (
-          <Overview attendance={attendance} leaves={leaves} payroll={payroll} htm={htm} />
-        )}
-        {activeTab === "Attendance" && (
-          <AttendanceTab attendance={attendance} />
-        )}
-        {activeTab === "Leaves" && (
-          <LeavesTab leaves={leaves} />
-        )}
-        {activeTab === "Payroll" && (
-          <PayrollTab payroll={payroll} />
-        )}
-        {activeTab === "HTM Codes" && (
-          <HTMTab htm={htm} />
-        )}
-        {activeTab === "Profile" && (
-          <ProfileTab employee={me} />
-        )}
+        {activeTab === 'Overview' && <Overview attendance={attendance} leaves={leaves} payroll={payroll} />}
+        {activeTab === 'Attendance' && <AttendanceTab attendance={attendance} />}
+        {activeTab === 'Leaves' && <LeavesTab leaves={leaves} />}
+        {activeTab === 'Payroll' && <PayrollTab payroll={payroll} />}
+        {activeTab === 'HTM Codes' && <HTMTab />}
+        {activeTab === 'Profile' && <ProfileTab employee={employee} />}
 
         <footer>
           <div className="muted">
@@ -764,7 +881,7 @@ function App() {
   );
 }
 
-/* Render app */
+/* Render */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
 
