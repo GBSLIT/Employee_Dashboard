@@ -1,339 +1,141 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <title>Employee Dashboard - Internal</title>
+  <title>Employee Dashboard - Live OneDrive Version</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+
   <style>
-    :root {
-      --bg: #f5f7fb;
-      --card: #ffffff;
-      --muted: #64748b;
-      --accent: #2563eb;
-      --accent-soft: #e0edff;
-      --radius: 14px;
+    :root{
+      --bg:#f6f8fb; --card:#ffffff; --muted:#64748b;
+      --accent:#2563eb; --radius:14px;
     }
-
-    * { box-sizing: border-box; }
-
-    html, body, #root {
-      height: 100%;
-      margin: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, "Helvetica Neue", Arial, sans-serif;
-    }
-
-    body {
-      background: radial-gradient(circle at top, #e5efff 0, #f5f7fb 42%, #edf1fb 100%);
-      color: #0f172a;
-    }
-
-    .app {
-      display: flex;
-      min-height: 100vh;
-    }
+    html,body,#root{height:100%; margin:0; font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{background:linear-gradient(180deg,#f8fbff 0%,var(--bg) 100%); color:#0f172a;}
+    .app { display:flex; min-height:100vh; }
 
     .sidebar {
-      width: 230px;
-      background: rgba(255, 255, 255, 0.96);
-      border-right: 1px solid #e2e8f0;
-      box-shadow: 8px 0 24px rgba(15, 23, 42, 0.05);
-      padding: 20px 18px;
-      display: flex;
-      flex-direction: column;
-      position: sticky;
-      top: 0;
-      height: 100vh;
+      width:220px; background:rgba(255,255,255,0.92);
+      box-shadow: 8px 0 24px rgba(15,23,42,0.03);
+      padding:20px; border-right:1px solid #eef2f7;
+      position:sticky; top:0; height:100vh; box-sizing:border-box;
     }
 
-    .logo {
-      font-weight: 800;
-      font-size: 20px;
-      margin-bottom: 4px;
-    }
-    .logo-sub {
-      font-size: 13px;
-      color: var(--muted);
-      margin-bottom: 18px;
-    }
-
-    .nav {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-top: 12px;
-    }
+    .logo { font-weight:700; font-size:18px; margin-bottom:18px; }
+    .nav { margin-top:18px; display:flex; flex-direction:column; gap:6px; }
     .nav button {
-      text-align: left;
-      padding: 9px 10px;
-      border-radius: 10px;
-      border: none;
-      background: none;
-      cursor: pointer;
-      font-size: 14px;
-      color: #0f172a;
-      font-weight: 500;
+      text-align:left; background:none; border:none;
+      padding:10px 12px; border-radius:10px;
+      cursor:pointer; color:#0f172a; font-weight:500;
     }
-    .nav button:hover {
-      background: #eef2ff;
-    }
-    .nav .active {
-      background: linear-gradient(90deg, rgba(37, 99, 235, 0.10), rgba(37, 99, 235, 0.02));
-      color: var(--accent);
+    .nav button:hover{ background:#f1f5f9; }
+    .nav .active{
+      background:linear-gradient(90deg, rgba(37,99,235,0.1), rgba(80,123,255,0.03));
+      color:var(--accent);
     }
 
-    .sidebar-footer {
-      margin-top: auto;
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .btn {
-      background: var(--accent);
-      color: #fff;
-      border-radius: 999px;
-      border: none;
-      padding: 8px 14px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-    .btn:hover { background: #1d4ed8; }
-
-    .btn-outline {
-      background: transparent;
-      color: var(--accent);
-      border-radius: 999px;
-      border: 1px solid var(--accent-soft);
-      padding: 7px 13px;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    .main {
-      flex: 1;
-      padding: 26px 26px 28px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-      gap: 18px;
-    }
-
-    .header-title {
-      font-size: 24px;
-      font-weight: 700;
-    }
-
-    .header-sub {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    .kpi-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 14px;
-      margin-bottom: 18px;
-    }
-
+    .main { flex:1; padding:28px; box-sizing:border-box; }
+    .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
+    .kpi-row { display:flex; gap:12px; flex-wrap:wrap; }
     .kpi {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px 16px;
-      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
-      min-width: 180px;
-      flex: 1;
+      background:var(--card); border-radius:12px;
+      padding:16px; box-shadow: 0 6px 18px rgba(15,23,42,0.04);
+      min-width:170px;
     }
-    .kpi-label {
-      font-size: 12px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .kpi-value {
-      margin-top: 8px;
-      font-size: 22px;
-      font-weight: 700;
-    }
-
-    .row {
-      display: flex;
-      gap: 14px;
-      margin-top: 8px;
-    }
-
-    .col {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    .kpi .label{ color:var(--muted); font-size:12px; }
+    .kpi .value{ font-size:20px; font-weight:700; margin-top:6px; }
 
     .card {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 14px 16px;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+      background:var(--card); border-radius:12px;
+      padding:16px; box-shadow: 0 8px 28px rgba(15,23,42,0.03);
+      margin-top:16px;
     }
 
-    .card-header {
-      font-weight: 600;
-      margin-bottom: 4px;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-      font-size: 13px;
-    }
-
+    .row { display:flex; gap:12px; }
+    .col-2 { display:flex; flex-direction:column; gap:12px; flex:1; }
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
     th, td {
-      text-align: left;
-      padding: 7px 4px;
-      border-bottom: 1px solid #e5e7eb;
+      text-align:left; padding:10px 8px;
+      border-bottom:1px solid #f1f5f9;
+      font-size:14px;
     }
 
-    th {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: #6b7280;
-    }
+    .muted { color:var(--muted); font-size:13px; }
+    .small { font-size:13px; color:var(--muted); }
 
-    tr:last-child td {
-      border-bottom: none;
+    .btn {
+      background:var(--accent); color:#fff;
+      border:none; padding:8px 12px;
+      border-radius:10px; cursor:pointer;
     }
 
     .search {
-      padding: 7px 10px;
-      border-radius: 999px;
-      border: 1px solid #e2e8f0;
-      font-size: 13px;
-      width: 220px;
-    }
-
-    .tabbar {
-      display: flex;
-      gap: 8px;
-    }
-    .tab {
-      padding: 7px 12px;
-      border-radius: 999px;
-      background: #f3f4ff;
-      font-size: 13px;
-      cursor: pointer;
-      font-weight: 500;
-      color: #111827;
-    }
-    .tab.active {
-      background: #e0ebff;
-      color: var(--accent);
-      box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
-    }
-
-    .avatar {
-      width: 92px;
-      height: 92px;
-      border-radius: 16px;
-      background: #eef2ff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 28px;
-      color: var(--accent);
-      overflow: hidden;
-    }
-    .avatar img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
-
-    footer {
-      margin-top: 18px;
-      font-size: 12px;
-      color: var(--muted);
+      padding:8px 12px; border-radius:10px;
+      border:1px solid #eef2f7; width:220px;
     }
 
     .login-wrap {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
+      min-height:100vh;
+      display:flex; align-items:center; justify-content:center;
     }
     .login-card {
-      width: 420px;
-      background: var(--card);
-      border-radius: 18px;
-      padding: 26px 24px 22px;
-      box-shadow: 0 20px 55px rgba(15, 23, 42, 0.16);
+      width:420px; background:var(--card);
+      padding:28px; border-radius:16px;
+      box-shadow: 0 12px 40px rgba(15,23,42,0.06);
     }
 
-    .small {
-      font-size: 13px;
-      color: var(--muted);
+    .field { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+    .input { padding:10px 12px; border-radius:10px; border:1px solid #e6eefb; }
+
+    .tabbar { display:flex; gap:8px; margin-top:12px; }
+    .tab {
+      padding:8px 12px; border-radius:10px;
+      background:#f8fafc; cursor:pointer;
+      font-weight:600;
+    }
+    .tab.active {
+      background:linear-gradient(90deg,#eef2ff,#fff);
+      color:var(--accent);
+      box-shadow:0 6px 18px rgba(37,99,235,0.06);
     }
 
-    .login-title {
-      font-size: 22px;
-      font-weight: 700;
-      margin-bottom: 4px;
+    .link-btn {
+      background:none; border:none; color:var(--accent);
+      cursor:pointer; padding:0; font-weight:600;
     }
 
-    .error {
-      margin-top: 8px;
-      font-size: 13px;
-      color: #b91c1c;
-    }
+    footer { margin-top:24px; color:var(--muted); font-size:13px; }
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 9px;
-      border-radius: 999px;
-      background: var(--accent-soft);
-      color: var(--accent);
-      font-size: 11px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+    .avatar {
+      width:92px; height:92px; border-radius:10px;
+      background:#eef2ff; display:flex; align-items:center;
+      justify-content:center; font-weight:700; font-size:28px;
+      color:var(--accent); overflow:hidden;
     }
+    .avatar img{width:100%;height:100%;object-fit:cover;}
 
-    @media (max-width: 900px) {
-      .sidebar { display: none; }
-      .main { padding: 16px; }
-      .row { flex-direction: column; }
-      .kpi { min-width: 150px; }
+    @media (max-width:900px){
+      .sidebar{display:none;}
+      .main{padding:14px;}
+      .row{flex-direction:column;}
+      .kpi{min-width:140px;}
     }
   </style>
 </head>
+
 <body>
 <div id="root"></div>
 
-<!-- MSAL browser (same CDN as PO dashboard) -->
-<script src="https://alcdn.msauth.net/browser/2.37.0/js/msal-browser.min.js"></script>
+<!-- MSAL + OneDrive Graph helper (module) -->
+<script type="module">
+  import * as msal from "https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.0/dist/msal-browser.esm.min.js";
 
-<!-- Graph / Excel helpers (NON-module, uses global msal) -->
-<script>
-  // ====== YOUR CONFIG ======
-  const CLIENT_ID    = "27917652-ca62-4409-b37c-e47df77bfce9";
-  const TENANT_ID    = "93846c24-8666-4033-8b6e-901877a2cf98";
+  // ***** YOUR REAL VALUES *****
+  const CLIENT_ID = "27917652-ca62-4409-b37c-e47df77bfce9";
+  const TENANT_ID = "93846c24-8666-4033-8b6e-901877a2cf98";
   const REDIRECT_URI = "https://gbslit.github.io/Employee_Dashboard/";
-  const DRIVE_ID     = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
-  const FILE_ID      = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
+  const DRIVE_ID = "b!btaPqJ-5kU-kkE4KEoaxo8fltt6l6xpLs60U3YTj_EAxQMgJa8fsSLceYscvhxNo";
+  const FILE_ID  = "016GCLEJF6QPT4M3PLEFEITOFBJOBB4R2E";
 
   const TABLES = {
     employees: "Employees",
@@ -346,291 +148,253 @@
   const msalInstance = new msal.PublicClientApplication({
     auth: {
       clientId: CLIENT_ID,
-      authority: "https://login.microsoftonline.com/" + TENANT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
       redirectUri: REDIRECT_URI
     },
     cache: { cacheLocation: "sessionStorage" }
   });
 
-  const SCOPES = ["Files.Read.All", "User.Read", "Sites.Read.All"];
+  const SCOPES = ["Files.Read.All","User.Read","Sites.Read.All"];
 
   async function getToken() {
-    let account = msalInstance.getAllAccounts()[0];
-    if (!account) {
-      const loginResult = await msalInstance.loginPopup({ scopes: SCOPES });
-      account = loginResult.account;
+    let accounts = msalInstance.getAllAccounts();
+    if (accounts.length === 0) {
+      const loginResp = await msalInstance.loginPopup({ scopes: SCOPES });
+      accounts = [loginResp.account];
     }
+    const account = accounts[0];
     try {
-      const result = await msalInstance.acquireTokenSilent({
+      const tokenResponse = await msalInstance.acquireTokenSilent({
         scopes: SCOPES,
         account
       });
-      return result.accessToken;
+      return tokenResponse.accessToken;
     } catch (e) {
-      const result = await msalInstance.acquireTokenPopup({
+      const tokenResponse = await msalInstance.acquireTokenPopup({
         scopes: SCOPES,
         account
       });
-      return result.accessToken;
+      return tokenResponse.accessToken;
     }
   }
 
-  window.fetchOneDriveTable = async function(tableKeyOrName) {
+  // fetch a table's columns & rows and return array of objects: [{col1: val, col2: val}, ...]
+  async function fetchOneDriveTable(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
-    const base = "https://graph.microsoft.com/v1.0/drives/" + DRIVE_ID +
-                 "/items/" + FILE_ID + "/workbook";
+    const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
 
-    const colRes = await fetch(
-      base + "/tables/" + encodeURIComponent(tableName) + "/columns",
-      { headers: { Authorization: "Bearer " + token } }
-    );
-    if (!colRes.ok) {
-      const t = await colRes.text().catch(() => "");
-      throw new Error("Columns fetch failed: " + colRes.status + " " + t);
+    // columns
+    const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(!colRes.ok) {
+      const txt = await colRes.text().catch(()=> '');
+      throw new Error('Columns fetch failed: ' + colRes.status + ' ' + txt);
     }
     const colJson = await colRes.json();
-    const columns = (colJson.value || []).map(c => c.name);
+    const columns = colJson.value.map(c => c.name);
 
-    const rowRes = await fetch(
-      base + "/tables/" + encodeURIComponent(tableName) + "/rows",
-      { headers: { Authorization: "Bearer " + token } }
-    );
-    if (!rowRes.ok) {
-      const t = await rowRes.text().catch(() => "");
-      throw new Error("Rows fetch failed: " + rowRes.status + " " + t);
+    // rows
+    const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if(!rowRes.ok) {
+      const txt = await rowRes.text().catch(()=> '');
+      throw new Error('Rows fetch failed: ' + rowRes.status + ' ' + txt);
     }
     const rowJson = await rowRes.json();
     const rows = (rowJson.value || []).map(r => {
       const vals = (r.values && r.values[0]) ? r.values[0] : [];
       const obj = {};
-      for (let i = 0; i < columns.length; i++) {
-        obj[columns[i]] = vals[i] ?? null;
-      }
+      for (let i = 0; i < columns.length; i++) obj[columns[i]] = vals[i] ?? null;
       return obj;
     });
     return rows;
-  };
+  }
 
+  async function loginPopup() {
+    const result = await msalInstance.loginPopup({ scopes: SCOPES });
+    return result.account;
+  }
+
+  function getAccount() {
+    return msalInstance.getAllAccounts()[0] || null;
+  }
+
+  async function logout() {
+    const acc = getAccount();
+    if (acc) {
+      await msalInstance.logoutPopup({ account: acc });
+    }
+  }
+
+  // expose helpers for React code
+  window.fetchOneDriveTable = fetchOneDriveTable;
   window.msalOneDrive = {
     msalInstance,
-    async loginPopup() { return msalInstance.loginPopup({ scopes: SCOPES }); },
-    getAccount() { return msalInstance.getAllAccounts()[0] || null; }
+    loginPopup,
+    getAccount,
+    logout
   };
 </script>
 
-<!-- React & Babel -->
+<!-- React UMD -->
 <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<!-- Babel compiler -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
 const { useState, useEffect } = React;
 
-/* ============ Helpers ============ */
-
-const normalizeFn = (s) => (s || "").toString().trim().toLowerCase();
-
-function formatExcelDate(raw) {
-  if (raw === null || raw === undefined || raw === "") return "";
-  if (typeof raw === "string" && isNaN(Number(raw))) return raw;
-
-  const serial = Number(raw);
-  if (!Number.isFinite(serial)) return String(raw);
-
-  const base = new Date(Date.UTC(1899, 11, 30));
-  base.setUTCDate(base.getUTCDate() + Math.floor(serial));
-
-  const day = String(base.getUTCDate()).padStart(2, "0");
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const mon = months[base.getUTCMonth()];
-  const year = base.getUTCFullYear();
-  return `${day}-${mon}-${year}`;
+/* ---------- Date / Time helpers ---------- */
+function formatExcelDate(value) {
+  if (value == null || value === "") return "";
+  // If numeric (Excel serial)
+  if (typeof value === "number") {
+    const base = new Date(Date.UTC(1899, 11, 30));
+    const date = new Date(base.getTime() + value * 86400000);
+    return date.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
+  }
+  // If string, just show as dd-MMM-yy style already
+  return String(value);
 }
 
-function formatExcelTime(raw) {
-  if (raw === null || raw === undefined || raw === "") return "";
-  const n = Number(raw);
-  if (!Number.isFinite(n)) return String(raw);
-
-  const totalMinutes = Math.round(n * 24 * 60);
-  const hours = Math.floor(totalMinutes / 60);
-  const mins = totalMinutes % 60;
-  return `${String(hours).padStart(2,"0")}:${String(mins).padStart(2,"0")}`;
+function formatExcelTime(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "number") {
+    let totalSeconds = Math.round(value * 24 * 60 * 60);
+    let hours = Math.floor(totalSeconds / 3600);
+    let minutes = Math.floor((totalSeconds % 3600) / 60);
+    return String(hours).padStart(2, "0") + ":" + String(minutes).padStart(2, "0");
+  }
+  return String(value);
 }
 
-function parseMoney(raw) {
-  if (raw == null) return 0;
-  const s = String(raw).replace(/[^0-9.-]/g, "");
-  const n = Number(s);
-  return Number.isFinite(n) ? n : 0;
-}
+/* ---------- UI components ---------- */
 
-/* ============ Login Screen ============ */
+function LoginPage({ onSignedIn }) {
+  const [error, setError] = useState("");
 
-function LoginScreen({ onSignedIn, error, loading }) {
   async function handleSignIn() {
-    await onSignedIn();
+    try {
+      setError("");
+      const account = await window.msalOneDrive.loginPopup();
+      onSignedIn(account);
+    } catch (e) {
+      console.error(e);
+      setError("Microsoft sign-in failed. See console for details.");
+    }
   }
 
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <div style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10}}>
-          <div>
-            <div className="login-title">Employee Dashboard</div>
-            <div className="small">Sign in with your company Microsoft 365 account.</div>
-          </div>
-          <span className="tag">Sign in with Microsoft 365</span>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard</div>
+          <div className="small">Sign in with Microsoft 365</div>
         </div>
 
-        <p className="small" style={{marginTop:10}}>
-          Use your <strong>@globalbasesourcing.com</strong> email. Data will be filtered so you only
-          see your own attendance, leaves, and payroll records.
+        <h2 style={{marginTop:6}}>Sign in</h2>
+        <p className="small">
+          Use your company email (Microsoft 365 account). Data will be filtered to your records only.
         </p>
 
         {error && (
-          <div className="error">
-            Microsoft sign-in failed. See console for details.
+          <div style={{color:"#dc2626",fontSize:13,marginTop:10,marginBottom:10}}>
+            {error}
           </div>
         )}
 
-        <button
-          className="btn"
-          style={{width:"100%", marginTop:18}}
-          onClick={handleSignIn}
-          disabled={loading}
-        >
-          {loading ? "Signing in…" : "Sign in with Microsoft 365"}
+        <button className="btn" style={{width:"100%",marginTop:16}} onClick={handleSignIn}>
+          Sign in with Microsoft 365
         </button>
 
-        <p className="small" style={{marginTop:14}}>
+        <footer style={{marginTop:18}} className="small muted">
           Your email is only used to match your row in the Employees Excel table.
-        </p>
+        </footer>
       </div>
     </div>
   );
 }
 
-/* ============ Layout Components ============ */
-
-function Sidebar({ activeTab, setActiveTab, employee, onLogout }) {
-  const tabs = ["Overview", "Attendance", "Leaves", "Payroll", "HTM Codes", "Profile"];
-  const shortEmail = employee?.email || "";
+function Sidebar({ current, onSelect, onLogout, email }) {
+  const tabs = ["Overview","Attendance","Leaves","Payroll","HTM Codes","Profile"];
   return (
-    <aside className="sidebar">
+    <div className="sidebar">
       <div className="logo">Acme Corp</div>
-      <div className="logo-sub">Employee Dashboard</div>
-
-      <nav className="nav">
-        {tabs.map((t) => (
-          <button
-            key={t}
-            className={activeTab === t ? "active" : ""}
-            onClick={() => setActiveTab(t)}
-          >
-            {t}
-          </button>
+      <div className="muted">Employee Dashboard</div>
+      <div className="nav">
+        {tabs.map(t=>(
+          <button key={t} className={current===t ? "active" : ""} onClick={()=>onSelect(t)}>{t}</button>
         ))}
-      </nav>
-
-      <div className="sidebar-footer">
-        <div style={{marginBottom:6}}>Signed in as <strong>GBSL IT</strong></div>
-        <div>{shortEmail}</div>
-        <button
-          className="btn"
-          style={{width:"100%", marginTop:12}}
-          onClick={onLogout}
-        >
-          Sign out
-        </button>
       </div>
-    </aside>
+      <div style={{marginTop:"auto", marginBottom:8}} className="small muted">
+        Signed in as <strong>GBSL IT</strong><br />{email}
+      </div>
+      <button onClick={onLogout} className="btn" style={{width:"100%"}}>Sign out</button>
+    </div>
   );
 }
 
-function KPICard({ label, value }) {
+function KPICard({label, value}) {
   return (
     <div className="kpi">
-      <div className="kpi-label">{label}</div>
-      <div className="kpi-value">{value}</div>
+      <div className="label">{label}</div>
+      <div className="value">{value}</div>
     </div>
   );
 }
 
-/* ============ Tabs ============ */
-
-const DUMMY_HTM_CODES = [
-  { code: "HTM010", description: "Full-Time Annual Leave", eligibility: "All FT employees" },
-  { code: "HTM020", description: "Sick Leave", eligibility: "All employees" }
-];
-
-function OverviewTab({ attendance, leaves, payroll, employeeEmail }) {
-  const pendingLeaves = leaves.filter(l =>
-    (l.status || "").toLowerCase().includes("pending")
-  ).length;
+function Overview({attendance, leaves, payroll, htm}) {
+  const latestAttendance = attendance.slice(0, 10);
+  const latestLeaves = leaves.slice(0, 10);
+  const latestPayroll = payroll.slice(0, 5);
 
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">Employee Dashboard — Personal View</div>
-          <div className="header-sub">
-            Data filtered for <strong>{employeeEmail}</strong>
-          </div>
-        </div>
-      </div>
-
       <div className="kpi-row">
         <KPICard label="My Attendance Records" value={attendance.length} />
-        <KPICard label="My Pending Leaves" value={pendingLeaves} />
+        <KPICard label="My Pending Leaves" value={leaves.filter(l => (l.status || "").toLowerCase() !== "approved").length} />
         <KPICard label="My Payroll Entries" value={payroll.length} />
       </div>
 
-      <div className="row">
-        <div className="col">
+      <div className="row" style={{marginTop:12}}>
+        <div className="col-2">
           <div className="card">
-            <div className="card-header">Attendance Snapshot</div>
-            <div className="muted">Latest attendance records</div>
+            <strong>Attendance Snapshot</strong>
+            <p className="muted">Latest attendance records</p>
             <table>
               <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Status</th>
-                  <th>Time In</th>
-                  <th>Time Out</th>
-                </tr>
+                <tr><th>Date</th><th>Status</th><th>Time In</th><th>Time Out</th></tr>
               </thead>
               <tbody>
-                {attendance.slice(0, 20).map((r, i) => (
+                {latestAttendance.map((r,i)=>(
                   <tr key={i}>
-                    <td>{r.date}</td>
-                    <td>{r.status}</td>
-                    <td>{r.timeIn}</td>
-                    <td>{r.timeOut}</td>
+                    <td>{r.date || "-"}</td>
+                    <td>{r.status || "-"}</td>
+                    <td>{r.timeIn || "-"}</td>
+                    <td>{r.timeOut || "-"}</td>
                   </tr>
                 ))}
-                {attendance.length === 0 && (
-                  <tr><td colSpan="4" className="muted">No attendance records found.</td></tr>
-                )}
               </tbody>
             </table>
           </div>
 
           <div className="card">
-            <div className="card-header">Recent Leaves</div>
-            <div className="muted">Your leave requests</div>
+            <strong>Recent Leaves</strong>
+            <p className="muted">Your leave requests</p>
             <table>
               <thead>
-                <tr>
-                  <th>From</th>
-                  <th>To</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                </tr>
+                <tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
               </thead>
               <tbody>
-                {leaves.map((l, i) => (
+                {latestLeaves.map((l,i)=>(
                   <tr key={i}>
                     <td>{l.start}</td>
                     <td>{l.end}</td>
@@ -638,53 +402,36 @@ function OverviewTab({ attendance, leaves, payroll, employeeEmail }) {
                     <td>{l.status}</td>
                   </tr>
                 ))}
-                {leaves.length === 0 && (
-                  <tr><td colSpan="4" className="muted">No leave records found.</td></tr>
-                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        <div style={{width:340}}>
+        <div style={{width:320}}>
           <div className="card">
-            <div className="card-header">Payroll Summary</div>
-            <div className="muted">Your payroll history</div>
+            <strong>Payroll Summary</strong>
+            <p className="muted">Your payroll history</p>
             <table>
-              <thead>
-                <tr>
-                  <th>Period</th>
-                  <th>Net</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Period</th><th>Net</th><th>Status</th></tr></thead>
               <tbody>
-                {payroll.map((p, i) => (
+                {latestPayroll.map((p,i)=>(
                   <tr key={i}>
                     <td>{p.period}</td>
                     <td>{p.net}</td>
                     <td>{p.status}</td>
                   </tr>
                 ))}
-                {payroll.length === 0 && (
-                  <tr><td colSpan="3" className="muted">No payroll entries.</td></tr>
-                )}
               </tbody>
             </table>
           </div>
 
-          <div className="card" style={{marginTop:14}}>
-            <div className="card-header">HTM Codes</div>
-            <div className="muted">Leave code mapping (static)</div>
+          <div className="card" style={{marginTop:12}}>
+            <strong>HTM Codes</strong>
+            <p className="muted">Leave code mapping (static)</p>
             <table>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Desc</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Code</th><th>Desc</th></tr></thead>
               <tbody>
-                {DUMMY_HTM_CODES.map((h, i) => (
+                {htm.map((h,i)=>(
                   <tr key={i}>
                     <td>{h.code}</td>
                     <td>{h.description}</td>
@@ -699,62 +446,33 @@ function OverviewTab({ attendance, leaves, payroll, employeeEmail }) {
   );
 }
 
-function AttendanceTab({ attendance }) {
+function AttendanceTab({attendance}) {
   const [filter, setFilter] = useState("All");
   const [q, setQ] = useState("");
-
-  const statuses = ["All", "Present", "OT", "LC", "WFH", "On Leave", "Absent"];
-
   const rows = attendance.filter(r => {
-    const statusOk = filter === "All" || (r.status || "") === filter;
-    const hay = ( (r.name || "") + " " +
-                  (r.employeeEmail || "") + " " +
-                  String(r.date || "")
-                ).toLowerCase();
-    const needle = q.toLowerCase();
-    return statusOk && hay.includes(needle);
+    const matchesFilter = filter === "All" || (r.status || "") === filter;
+    const text = `${r.name || ""} ${r.employeeId || ""} ${r.date || ""}`.toLowerCase();
+    return matchesFilter && text.includes(q.toLowerCase());
   });
 
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">Attendance</div>
-          <div className="header-sub">Search and filter your attendance records</div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <div className="tabbar">
+          {["All","Present","WFH","On Leave","Absent","OT","LC","H"].map(t=>(
+            <div key={t} className={`tab ${t===filter?'active':''}`} onClick={()=>setFilter(t)}>{t}</div>
+          ))}
         </div>
-        <div style={{display:"flex", gap:10, alignItems:"center"}}>
-          <div className="tabbar">
-            {statuses.map((s) => (
-              <div
-                key={s}
-                className={"tab " + (filter === s ? "active" : "")}
-                onClick={() => setFilter(s)}
-              >
-                {s}
-              </div>
-            ))}
-          </div>
-          <input
-            className="search"
-            placeholder="Search by date or status"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+        <div>
+          <input className="search" placeholder="Search by date or status" value={q} onChange={e=>setQ(e.target.value)} />
         </div>
       </div>
 
       <div className="card" style={{marginTop:12}}>
         <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Time In</th>
-              <th>Time Out</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Date</th><th>Status</th><th>In</th><th>Out</th></tr></thead>
           <tbody>
-            {rows.map((r, i) => (
+            {rows.map((r,i)=>(
               <tr key={i}>
                 <td>{r.date}</td>
                 <td>{r.status}</td>
@@ -762,9 +480,6 @@ function AttendanceTab({ attendance }) {
                 <td>{r.timeOut}</td>
               </tr>
             ))}
-            {rows.length === 0 && (
-              <tr><td colSpan="4" className="muted">No records match your filters.</td></tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -772,42 +487,25 @@ function AttendanceTab({ attendance }) {
   );
 }
 
-function LeavesTab({ leaves }) {
+function LeavesTab({leaves}) {
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">Leaves</div>
-          <div className="header-sub">Your leave applications and approvals</div>
-        </div>
-        <button className="btn-outline" onClick={() => alert("Apply leave (demo)")}>
-          Apply Leave
-        </button>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <h3>Leaves</h3>
+        <button className="btn" onClick={()=>alert("Open apply leave form (demo)")}>Apply Leave</button>
       </div>
       <div className="card">
         <table>
-          <thead>
-            <tr>
-              <th>From</th>
-              <th>To</th>
-              <th>Type</th>
-              <th>Paid Days</th>
-              <th>Status</th>
-            </tr>
-          </thead>
+          <thead><tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr></thead>
           <tbody>
-            {leaves.map((l, i) => (
+            {leaves.map((l,i)=>(
               <tr key={i}>
                 <td>{l.start}</td>
                 <td>{l.end}</td>
                 <td>{l.type}</td>
-                <td>{l.paidDays}</td>
                 <td>{l.status}</td>
               </tr>
             ))}
-            {leaves.length === 0 && (
-              <tr><td colSpan="5" className="muted">No leave records.</td></tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -815,27 +513,18 @@ function LeavesTab({ leaves }) {
   );
 }
 
-function PayrollTab({ payroll }) {
+function PayrollTab({payroll}) {
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">Payroll</div>
-          <div className="header-sub">Your payroll history</div>
-        </div>
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <h3>Payroll</h3>
+        <button className="btn" onClick={()=>alert("Run payroll (demo)")}>Run Payroll</button>
       </div>
       <div className="card">
         <table>
-          <thead>
-            <tr>
-              <th>Pay Period</th>
-              <th>Gross</th>
-              <th>Net</th>
-              <th>Status</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Pay Period</th><th>Gross</th><th>Net</th><th>Status</th></tr></thead>
           <tbody>
-            {payroll.map((p, i) => (
+            {payroll.map((p,i)=>(
               <tr key={i}>
                 <td>{p.period}</td>
                 <td>{p.gross}</td>
@@ -843,9 +532,6 @@ function PayrollTab({ payroll }) {
                 <td>{p.status}</td>
               </tr>
             ))}
-            {payroll.length === 0 && (
-              <tr><td colSpan="4" className="muted">No payroll records.</td></tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -853,26 +539,15 @@ function PayrollTab({ payroll }) {
   );
 }
 
-function HTMTab() {
+function HTMTab({htm}) {
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">HTM Codes</div>
-          <div className="header-sub">Leave code configuration from Excel</div>
-        </div>
-      </div>
+      <h3>HTM Codes</h3>
       <div className="card">
         <table>
-          <thead>
-            <tr>
-              <th>Code</th>
-              <th>Description</th>
-              <th>Eligibility</th>
-            </tr>
-          </thead>
+          <thead><tr><th>Code</th><th>Description</th><th>Eligibility</th></tr></thead>
           <tbody>
-            {DUMMY_HTM_CODES.map((h, i) => (
+            {htm.map((h,i)=>(
               <tr key={i}>
                 <td>{h.code}</td>
                 <td>{h.description}</td>
@@ -886,277 +561,239 @@ function HTMTab() {
   );
 }
 
-function ProfileTab({ employee }) {
-  if (!employee) {
-    return <div className="card">Employee record not found in Excel.</div>;
-  }
-
+function ProfileTab({employee}) {
+  if (!employee) return <div className="card">Employee not found</div>;
   const initials = employee.name
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .slice(0, 2)
-    .join("");
+    ? employee.name.split(" ").map(n=>n[0]).slice(0,2).join("")
+    : "NA";
 
   return (
     <div>
-      <div className="header">
-        <div>
-          <div className="header-title">Employee Dashboard — Personal View</div>
-          <div className="header-sub">
-            Data filtered for <strong>{employee.email}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="card" style={{display:"flex", gap:18, alignItems:"center"}}>
+      <div className="card" style={{display:"flex", gap:16, alignItems:"center"}}>
         <div className="avatar">
-          {employee.photoUrl ? (
-            <img src={employee.photoUrl} alt={employee.name} />
-          ) : (
-            initials
-          )}
+          {employee.photoUrl
+            ? <img src={employee.photoUrl} alt="Profile" />
+            : initials}
         </div>
         <div>
-          <div style={{fontSize:20, fontWeight:700}}>{employee.name}</div>
+          <div style={{fontSize:18,fontWeight:700}}>{employee.name}</div>
           <div className="muted">Employee • —</div>
-          <div style={{marginTop:8}} className="small">
-            Email: {employee.email}
-          </div>
-          {employee.id && (
-            <div className="small">Employee ID: {employee.id}</div>
-          )}
-          {employee.mobile && (
-            <div className="small">Mobile: {employee.mobile}</div>
-          )}
-          <div style={{marginTop:10}}>
+          <div style={{marginTop:8}} className="small">Email: {employee.email}</div>
+          <div className="small">Employee ID: {employee.id}</div>
+          <div className="small">Mobile: {employee.mobile || "—"}</div>
+          <div style={{marginTop:8}}>
             <strong>Leave Balance:</strong> {employee.leaveBalance || 0} days
           </div>
         </div>
       </div>
 
-      <div className="card" style={{marginTop:14}}>
-        <div className="card-header">Quick Actions</div>
-        <div style={{display:"flex", gap:10, marginTop:8}}>
-          <button className="btn" onClick={() => alert("Mark attendance (demo)")}>
-            Mark Attendance
-          </button>
-          <button
-            className="btn"
-            style={{background:"#06b6d4"}}
-            onClick={() => alert("Apply leave (demo)")}
-          >
-            Apply Leave
-          </button>
+      <div className="card">
+        <h4>Quick Actions</h4>
+        <div style={{display:"flex", gap:8, marginTop:8}}>
+          <button className="btn" onClick={()=>alert("Mark attendance (demo)")}>Mark Attendance</button>
+          <button className="btn" style={{background:"#06b6d4"}} onClick={()=>alert("Apply leave (demo)")}>Apply Leave</button>
         </div>
+      </div>
+      <div className="small muted" style={{marginTop:16}}>
+        Live data from OneDrive Excel — rows are restricted to your email account.
       </div>
     </div>
   );
 }
 
-/* ============ Main App ============ */
-
+/* ---------- Top-level App ---------- */
 function App() {
   const [account, setAccount] = useState(null);
-  const [employee, setEmployee] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("Overview");
+
+  const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
   const [payroll, setPayroll] = useState([]);
-  const [activeTab, setActiveTab] = useState("Overview");
-  const [loading, setLoading] = useState(false);
-  const [loginError, setLoginError] = useState("");
+  const [htm, setHtm] = useState([]);
 
-  async function handleMsSignIn() {
-    setLoginError("");
+  async function loadLiveDataForAccount(acc) {
+    if (!acc) return;
     setLoading(true);
     try {
-      const res = await window.msalOneDrive.loginPopup();
-      const acc = window.msalOneDrive.getAccount() || res.account;
-      setAccount(acc);
-      await loadLiveDataForAccount(acc);
-    } catch (e) {
-      console.error(e);
-      setLoginError("Microsoft sign-in failed. See console for details.");
+      const emailLower = (acc.username || "").toLowerCase();
+
+      // Employees
+      const empRows = await window.fetchOneDriveTable("employees").catch(() => []);
+      const mappedEmp = empRows.map(r => ({
+        id: r["Employee ID"] || r["EmployeeId"] || r["ID"],
+        email: r["Email address"] || r["Email"] || r["Microsoft Email ID"] || "",
+        name: r["Emp Name"] || r["Name"] || "",
+        mobile: r["Mobile"] || r["Phone"] || "",
+        photoUrl: r["EmployeePhoto"] || r["Employee Photo"] || ""
+      }));
+      setEmployees(mappedEmp);
+
+      const me = mappedEmp.find(e => (e.email || "").toLowerCase() === emailLower) || null;
+
+      // Attendance
+      const attRows = await window.fetchOneDriveTable("attendance").catch(() => []);
+      let attendanceMapped = attRows.map((r) => ({
+        employeeEmail:
+          r["Email ID"] ||
+          r["Email"] ||
+          r.EmailID ||
+          r.Email ||
+          "",
+        name: r["Emp Name"] || r["Name"] || "",
+        date: formatExcelDate(r["Date"] ?? r.Date ?? ""),
+        status: r["Status"] || r.Status || "",
+        // >>>>> corrected mapping for your real column names <<<<<
+        timeIn: formatExcelTime(
+          r["Time_In"] ??
+          r["Check-IN Time"] ??
+          r["Check In Time"] ??
+          r.CheckINTime ??
+          ""
+        ),
+        timeOut: formatExcelTime(
+          r["Time_Out"] ??
+          r["Check-Out Time"] ??
+          r["Check Out Time"] ??
+          r.CheckOutTime ??
+          ""
+        )
+      }));
+      attendanceMapped = attendanceMapped.filter(r =>
+        (r.employeeEmail || "").toLowerCase() === emailLower
+      );
+      setAttendance(attendanceMapped);
+
+      const displayName = me ? me.name : "";
+
+      // Leaves
+      const leavesRows = await window.fetchOneDriveTable("leaves").catch(() => []);
+      let leavesMapped = leavesRows.map(r => ({
+        employeeId: r["Employee Id"] || r["EmployeeID"] || r["Employee Id"],
+        name: r["Name"] || "",
+        start: formatExcelDate(r["Start Date"] ?? r["Start"] ?? r["start"]),
+        end: formatExcelDate(r["End Date"] ?? r["End"] ?? r["end"]),
+        type: r["Leave Type"] || r["Type"] || "",
+        status: r["Approval Decision"] || r["Status"] || "",
+        days: r["Approved Number of days"] || r["Paid Days"] || 0
+      }));
+      if (displayName) {
+        leavesMapped = leavesMapped.filter(l => (l.name || "").toLowerCase() === displayName.toLowerCase());
+      }
+      setLeaves(leavesMapped);
+
+      // Payroll
+      const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => []);
+      let payrollMapped = payrollRows.map(r => ({
+        employee: r["Employee"] || r["Name"] || "",
+        period: r["Pay Period"] || r["Period"] || "",
+        gross: r["Gross"] || "",
+        net: r["Net"] || "",
+        status: r["Status"] || ""
+      }));
+      if (displayName) {
+        payrollMapped = payrollMapped.filter(p => (p.employee || "").toLowerCase() === displayName.toLowerCase());
+      }
+      setPayroll(payrollMapped);
+
+      // HTM codes
+      const htmRows = await window.fetchOneDriveTable("htm").catch(() => []);
+      const htmMapped = htmRows.map(r => ({
+        code: r["Code"] || "",
+        description: r["Description"] || "",
+        eligibility: r["Eligibility"] || ""
+      }));
+      setHtm(htmMapped);
+
+    } catch (err) {
+      console.error("Live data load failed", err);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadLiveDataForAccount(acc) {
-    if (!acc) return;
-    const email = acc.username || acc.userName || "";
-    const lowerEmail = normalizeFn(email);
-
-    try {
-      const empRows = await window.fetchOneDriveTable("employees").catch(() => []);
-      let employeesMapped = empRows.map((r) => {
-        const excelEmail = r["Email address"] || r["Email"] || r["Email ID"] || r.Email || "";
-        const msEmail = r["Microsoft Email ID"] || r["Microsoft Email"] || "";
-        return {
-          id: r["Employee ID"] || r["Employee Id"] || r["EmployeeId"] || r.EmployeeID || "",
-          name: r["Emp Name"] || r["Name"] || "",
-          email: excelEmail || msEmail || email,
-          excelEmail,
-          msEmail,
-          mobile: r["Mobile"] || r["Phone"] || r["EmployeePh"] || "",
-          photoUrl: r["Photo URL"] || r["Employee Photo"] || r["EmployeePhoto"] || null,
-          leaveBalance: r["Leave Balance"] || r["LeaveBalance"] || 0
-        };
-      });
-
-      let current = employeesMapped.find(
-        (e) =>
-          normalizeFn(e.msEmail) === lowerEmail ||
-          normalizeFn(e.excelEmail) === lowerEmail
-      );
-
-      if (!current) {
-        current = {
-          id: "",
-          name: email,
-          email,
-          excelEmail: email,
-          msEmail: email,
-          mobile: "",
-          leaveBalance: 0,
-          photoUrl: null
-        };
-      }
-
-      setEmployee(current);
-
-      const attRows = await window.fetchOneDriveTable("attendance").catch(() => []);
-      let attendanceMapped = attRows.map((r) => ({
-        employeeEmail: r["Email ID"] || r["Email"] || r.EmailID || r.Email || "",
-        name: r["Emp Name"] || r["Name"] || "",
-        date: formatExcelDate(r["Date"] ?? r.Date ?? ""),
-        status: r["Status"] || r.Status || "",
-        timeIn: formatExcelTime(
-          r["Check-IN Time"] ?? r["Check In Time"] ?? r.CheckINTime ?? ""
-        ),
-        timeOut: formatExcelTime(
-          r["Check-Out Time"] ?? r["Check Out Time"] ?? r.CheckOutTime ?? ""
-        )
-      }));
-
-      attendanceMapped = attendanceMapped.filter(
-        (a) => normalizeFn(a.employeeEmail) === lowerEmail
-      );
-      setAttendance(attendanceMapped);
-
-      const leavesRows = await window.fetchOneDriveTable("leaves").catch(() => []);
-      let leavesMapped = leavesRows.map((r) => ({
-        employeeId: r["Employee Id"] || r["Employee ID"] || r.EmployeeID || "",
-        name: r["Name"] || r["Emp Name"] || "",
-        start: formatExcelDate(r["Start Date"] ?? r["Start"] ?? r.start),
-        end: formatExcelDate(r["End Date"] ?? r["End Data"] ?? r.end),
-        type: r["Leave Type"] || r["Type"] || "",
-        status: r["Approval Decision"] || r["Status"] || "",
-        paidDays: r["Paid Days"] || r["PaidDays"] || ""
-      }));
-
-      const currentIdLower = normalizeFn(current.id);
-      const currentNameLower = normalizeFn(current.name);
-      leavesMapped = leavesMapped.filter((l) => {
-        const idLower = normalizeFn(l.employeeId);
-        const nameLower = normalizeFn(l.name);
-        return (
-          (currentIdLower && idLower === currentIdLower) ||
-          (currentNameLower && nameLower === currentNameLower)
-        );
-      });
-      setLeaves(leavesMapped);
-
-      const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => []);
-      let payrollMapped = payrollRows.map((r) => ({
-        employeeName: r["Employee"] || r["Emp Name"] || r.Name || "",
-        period: r["Pay Period"] || r["Period"] || "",
-        gross: parseMoney(r["Gross"] ?? r.Gross ?? 0),
-        net: parseMoney(r["Net"] ?? r.Net ?? 0),
-        status: r["Status"] || r.Status || ""
-      }));
-
-      payrollMapped = payrollMapped.filter(
-        (p) => normalizeFn(p.employeeName) === normalizeFn(current.name)
-      );
-
-      setPayroll(
-        payrollMapped.map((p) => ({
-          ...p,
-          gross: p.gross.toLocaleString("en-US"),
-          net: p.net.toLocaleString("en-US")
-        }))
-      );
-    } catch (err) {
-      console.error("Live data load failed", err);
-      setLoginError("Error loading data from Excel. See console for details.");
-    }
-  }
-
-  function handleLogout() {
-    window.msalOneDrive.msalInstance.logoutPopup().catch(console.error);
-    setAccount(null);
-    setEmployee(null);
-    setAttendance([]);
-    setLeaves([]);
-    setPayroll([]);
-    setActiveTab("Overview");
-  }
-
   useEffect(() => {
-    if (!window.msalOneDrive) return;
     const acc = window.msalOneDrive.getAccount();
-    if (acc && !account) {
+    if (acc) {
       setAccount(acc);
       loadLiveDataForAccount(acc);
     }
   }, []);
 
-  if (!account || !employee) {
-    return (
-      <LoginScreen
-        onSignedIn={handleMsSignIn}
-        error={loginError}
-        loading={loading}
-      />
-    );
+  async function handleSignedIn(acc) {
+    setAccount(acc);
+    setActiveTab("Overview");
+    await loadLiveDataForAccount(acc);
   }
+
+  async function handleLogout() {
+    await window.msalOneDrive.logout();
+    setAccount(null);
+    setAttendance([]);
+    setLeaves([]);
+    setPayroll([]);
+    setEmployees([]);
+    setHtm([]);
+  }
+
+  if (!account) {
+    return <LoginPage onSignedIn={handleSignedIn} />;
+  }
+
+  const me = employees.find(e => (e.email || "").toLowerCase() === (account.username || "").toLowerCase()) || null;
 
   return (
     <div className="app">
       <Sidebar
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        employee={employee}
+        current={activeTab}
+        onSelect={setActiveTab}
         onLogout={handleLogout}
+        email={account.username}
       />
-      <main className="main">
+      <div className="main">
+        <div className="header">
+          <div>
+            <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard — Personal View</div>
+            <div className="muted">Data filtered for <strong>{account.username}</strong></div>
+          </div>
+          <div style={{display:"flex", gap:12, alignItems:"center"}}>
+            {loading && <div className="small muted">Refreshing data…</div>}
+          </div>
+        </div>
+
         {activeTab === "Overview" && (
-          <OverviewTab
-            attendance={attendance}
-            leaves={leaves}
-            payroll={payroll}
-            employeeEmail={employee.email}
-          />
+          <Overview attendance={attendance} leaves={leaves} payroll={payroll} htm={htm} />
         )}
         {activeTab === "Attendance" && (
           <AttendanceTab attendance={attendance} />
         )}
-        {activeTab === "Leaves" && <LeavesTab leaves={leaves} />}
-        {activeTab === "Payroll" && <PayrollTab payroll={payroll} />}
-        {activeTab === "HTM Codes" && <HTMTab />}
-        {activeTab === "Profile" && <ProfileTab employee={employee} />}
+        {activeTab === "Leaves" && (
+          <LeavesTab leaves={leaves} />
+        )}
+        {activeTab === "Payroll" && (
+          <PayrollTab payroll={payroll} />
+        )}
+        {activeTab === "HTM Codes" && (
+          <HTMTab htm={htm} />
+        )}
+        {activeTab === "Profile" && (
+          <ProfileTab employee={me} />
+        )}
 
         <footer>
-          Live data from OneDrive Excel — rows are restricted to your email
-          account.
+          <div className="muted">
+            Live data from OneDrive Excel — rows are restricted to your email account.
+          </div>
         </footer>
-      </main>
+      </div>
     </div>
   );
 }
 
+/* Render app */
 ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 </script>
+
 </body>
 </html>
