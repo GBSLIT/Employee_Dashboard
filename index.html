@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Employee Dashboard - Global Base</title>
+  <title>Employee Dashboard - Global</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
   <!-- MSAL (global) -->
@@ -328,7 +328,7 @@ function LoginPage({ onSignIn, error }) {
 
         <h2 style={{marginTop:6}}>Sign in</h2>
         <p className="small">
-          Use your company Email (Microsoft 365 account).
+          Use your company email (Microsoft 365 account). Data will be filtered to your records only.
         </p>
 
         {error && (
@@ -344,7 +344,7 @@ function LoginPage({ onSignIn, error }) {
         </div>
 
         <footer style={{marginTop:16}} className="small muted">
-          Your email is only used to Login in Employee Dashboard.
+          Your email is only used to match your row in the Employees Excel table.
         </footer>
       </div>
     </div>
@@ -740,10 +740,10 @@ function ProfileTab({employee}) {
         <div className="profile-actions">
           <button className="btn" onClick={()=>alert('Mark attendance (future)')}>Mark Attendance</button>
           <button className="btn" onClick={()=>alert('Apply leave (future)')}>Apply Leave</button>
-          <button className="btn" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
-          <button className="btn" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
-          <button className="btn" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
-          <button className="btn" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
+          <button className="btn btn-secondary" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
+          <button className="btn btn-secondary" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
+          <button className="btn btn-secondary" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
+          <button className="btn btn-secondary" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
         </div>
       </div>
     </div>
@@ -967,39 +967,32 @@ function App() {
       }
 
       /* ===== 4) LEAVE CALCULATION TABLE ===== */
-      const calcRows = await window.fetchOneDriveTable("Leave_Calculation").catch(() => null);
-      if (calcRows && calcRows.length) {
-        let myCalcRow =
-          calcRows.find(r => normalizeFn(
-            r["Employee Id"] || r["Employee ID"] || r.EmployeeId || ""
-          ) === myId) || null;
+      const leaveCalcRows = await window.fetchOneDriveTable("leaveCalc").catch(() => null);
+      if (leaveCalcRows && leaveCalcRows.length) {
+        let row = leaveCalcRows.find(r => {
+          const em =
+            r["Microsoft Email ID"] ||
+            r["Email address"] ||
+            r["Email"] ||
+            "";
+          return normalize(em) === lowerEmail;
+        }) || leaveCalcRows[0];
 
-        if (!myCalcRow && myName) {
-          myCalcRow = calcRows.find(r => normalizeFn(r["Name"] || r.Name || "") === myName) || null;
-        }
-
-        if (myCalcRow) {
-          const totalLeaves = Number(myCalcRow["Total Leaves"] || 0);
-          const allottedCL = totalLeaves / 2;
-          const allottedSL = totalLeaves / 2;
-          const usedCL = Number(myCalcRow["Casual Leave (CL)"] || 0);
-          const usedSL = Number(myCalcRow["Sick Leave (SL)"] || 0);
-          const availCL = Math.max(0, allottedCL - usedCL);
-          const availSL = Math.max(0, allottedSL - usedSL);
+        if (row) {
+          const totalLeaves = Number(row["Total Leaves"] || 0);
+          const allotted = totalLeaves / 2;
+          const clUsed = Number(row["Casual Leave (CL)"] || 0);
+          const slUsed = Number(row["Sick Leave (SL)"] || 0);
 
           setLeaveCalc({
-            allottedCL,
-            allottedSL,
-            usedCL,
-            usedSL,
-            availCL,
-            availSL
+            allottedCL: allotted,
+            allottedSL: allotted,
+            usedCL: clUsed,
+            usedSL: slUsed,
+            availCL: allotted - clUsed,
+            availSL: allotted - slUsed
           });
-        } else {
-          setLeaveCalc(null);
         }
-      } else {
-        setLeaveCalc(null);
       }
 
       /* ===== 5) WEEKLY AGENDA TABLE ===== */
@@ -1103,4 +1096,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
-
