@@ -64,6 +64,7 @@
     }
 
     .muted { color:var(--muted); font-size:13px; }
+    .small { font-size:13px; color:var(--muted); }
 
     .btn {
       background:var(--accent); color:#fff;
@@ -85,7 +86,6 @@
       padding:28px; border-radius:16px;
       box-shadow: 0 12px 40px rgba(15,23,42,0.06);
     }
-    .small { font-size:13px; color:var(--muted); }
 
     .tabbar { display:flex; gap:8px; margin-top:12px; }
     .tab {
@@ -101,6 +101,18 @@
 
     .link-btn { background:none; border:none; color:var(--accent); cursor:pointer; padding:0; font-weight:600; }
     footer { margin-top:24px; color:var(--muted); font-size:13px; }
+
+    /* Paid Leave Calculation */
+    .paid-leave-title {
+      text-align:center;
+      font-weight:700;
+      margin-bottom:4px;
+    }
+    .paid-leave-note {
+      margin-top:8px;
+      font-size:13px;
+      color:#b91c1c;
+    }
 
     @media (max-width:900px){
       .sidebar{display:none;}
@@ -126,7 +138,7 @@
     employees:  "Employees",
     attendance: "Attendance",
     leaves:     "Leaves",
-    payroll:    "Payroll",
+    weeklyAgenda: "Weekly_Agenda",   // NEW
     htm:        "HTM_LeaveCodes"
   };
 
@@ -215,21 +227,25 @@
 <script type="text/babel">
 const { useState } = React;
 
-/* ---------- Excel Date / Time Helpers (NEW) ---------- */
-function formatExcelDate(value) {
-  if (value === null || value === undefined || value === "") return "";
+/* ---------- Excel Date / Time Helpers ---------- */
+function excelToJSDate(value) {
+  if (value === null || value === undefined || value === "") return null;
   if (typeof value === "number") {
-    // Excel serial, with 1899-12-30 base
     const base = new Date(Date.UTC(1899, 11, 30));
-    const date = new Date(base.getTime() + value * 86400000);
-    return date.toLocaleDateString("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric"
-    });
+    return new Date(base.getTime() + value * 86400000);
   }
-  // Already a string - just show it
-  return String(value);
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatExcelDate(value) {
+  const date = excelToJSDate(value);
+  if (!date) return "";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric"
+  });
 }
 
 function formatExcelTime(value) {
@@ -280,21 +296,24 @@ function LoginPage({ onSignIn, error }) {
 
 /* ------------ Sidebar ------------ */
 function Sidebar({ current, onSelect, onLogout, user }) {
-  const tabs = ['Overview','Attendance','Leaves','Payroll','HTM Codes','Profile'];
+  const tabs = ['Overview','Leaves','Weekly Agenda','Profile'];
   return (
     <div className="sidebar">
       <div className="logo">Acme Corp</div>
       <div className="muted">Employee Dashboard</div>
       <div className="nav">
-        {tabs.map(t=>(
-          <button
-            key={t}
-            className={current===t ? 'active' : ''}
-            onClick={()=>onSelect(t)}
-          >
-            {t}
-          </button>
-        ))}
+        {tabs.map(t=>{
+          const label = t === 'Overview' ? 'Attendance' : t;
+          return (
+            <button
+              key={t}
+              className={current===t ? 'active' : ''}
+              onClick={()=>onSelect(t)}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
       <div style={{marginTop:'auto', marginBottom:8}} className="small muted">
         Signed in as <strong>{user?.name || user?.email || 'Employee'}</strong><br/>
@@ -314,32 +333,69 @@ function KPICard({label, value}) {
   );
 }
 
-/* ------------ Tabs ------------ */
-function Overview({attendance, leaves, payroll}) {
+/* ------------ Attendance (Overview) ------------ */
+function Overview({attendance, leaves}) {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const prevMonth = prevMonthDate.getMonth();
+  const prevYear = prevMonthDate.getFullYear();
+
+  const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const currentLabel = `${monthNames[currentMonth]} Attendance`;
+  const prevLabel = `${monthNames[prevMonth]} Attendance`;
+
+  const currentMonthRows = attendance.filter(r =>
+    r.dateObj &&
+    r.dateObj.getMonth() === currentMonth &&
+    r.dateObj.getFullYear() === currentYear
+  );
+
+  const prevMonthRows = attendance.filter(r =>
+    r.dateObj &&
+    r.dateObj.getMonth() === prevMonth &&
+    r.dateObj.getFullYear() === prevYear
+  );
+
+  const appliedLeavesCount = leaves.length;
+  const approvedLeavesCount = leaves.filter(
+    l => (l.status || '').toLowerCase() === 'approved'
+  ).length;
+
   return (
     <div>
       <div className="kpi-row">
         <KPICard label="My Attendance Records" value={attendance.length} />
-        <KPICard label="My Pending Leaves" value={leaves.filter(l=>l.status==='Pending').length} />
-        <KPICard label="My Payroll Entries" value={payroll.length} />
+        <KPICard label="Applied Leaves" value={appliedLeavesCount} />
+        <KPICard label="Approved Leaves" value={approvedLeavesCount} />
       </div>
 
       <div className="row" style={{marginTop:12}}>
         <div className="col-2">
           <div className="card">
-            <strong>Attendance Snapshot</strong>
-            <p className="muted">Latest attendance records</p>
+            <strong>{currentLabel}</strong>
+            <p className="muted">This month attendance records</p>
             <table>
               <thead>
-                <tr><th>Date</th><th>Status</th><th>Time In</th><th>Time Out</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Day</th>
+                  <th>Check In Time</th>
+                  <th>Check Out Time</th>
+                  <th>Late Hours</th>
+                  <th>Status</th>
+                </tr>
               </thead>
               <tbody>
-                {attendance.map((r,i)=>(
+                {currentMonthRows.map((r,i)=>(
                   <tr key={i}>
                     <td>{r.date}</td>
-                    <td>{r.status}</td>
+                    <td>{r.day}</td>
                     <td>{r.timeIn}</td>
                     <td>{r.timeOut}</td>
+                    <td>{r.lateHours}</td>
+                    <td>{r.status}</td>
                   </tr>
                 ))}
               </tbody>
@@ -347,56 +403,30 @@ function Overview({attendance, leaves, payroll}) {
           </div>
 
           <div className="card">
-            <strong>Recent Leaves</strong>
-            <p className="muted">Your leave requests</p>
+            <strong>{prevLabel}</strong>
+            <p className="muted">Last month attendance records</p>
             <table>
               <thead>
-                <tr><th>From</th><th>To</th><th>Type</th><th>Status</th></tr>
+                <tr>
+                  <th>Date</th>
+                  <th>Day</th>
+                  <th>Check In Time</th>
+                  <th>Check Out Time</th>
+                  <th>Late Hours</th>
+                  <th>Status</th>
+                </tr>
               </thead>
               <tbody>
-                {leaves.map((l,i)=>(
+                {prevMonthRows.map((r,i)=>(
                   <tr key={i}>
-                    <td>{l.start}</td>
-                    <td>{l.end}</td>
-                    <td>{l.type}</td>
-                    <td>{l.status}</td>
+                    <td>{r.date}</td>
+                    <td>{r.day}</td>
+                    <td>{r.timeIn}</td>
+                    <td>{r.timeOut}</td>
+                    <td>{r.lateHours}</td>
+                    <td>{r.status}</td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div style={{width:320}}>
-          <div className="card">
-            <strong>Payroll Summary</strong>
-            <p className="muted">Your payroll history</p>
-            <table>
-              <thead>
-                <tr><th>Period</th><th>Net</th><th>Status</th></tr>
-              </thead>
-              <tbody>
-                {payroll.map((p,i)=>(
-                  <tr key={i}>
-                    <td>{p.period}</td>
-                    <td>{p.net}</td>
-                    <td>{p.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="card" style={{marginTop:12}}>
-            <strong>HTM Codes</strong>
-            <p className="muted">Leave code mapping (static)</p>
-            <table>
-              <thead>
-                <tr><th>Code</th><th>Desc</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>HTM010</td><td>Full-Time Annual Leave</td></tr>
-                <tr><td>HTM020</td><td>Sick Leave</td></tr>
               </tbody>
             </table>
           </div>
@@ -406,64 +436,56 @@ function Overview({attendance, leaves, payroll}) {
   );
 }
 
-function AttendanceTab({attendance}) {
-  const [filter, setFilter] = useState('All');
-  const [q, setQ] = useState('');
-
-  const rows = attendance.filter(r =>
-    (filter==='All' || r.status===filter) &&
-    (r.date || '').toLowerCase().includes(q.toLowerCase())
-  );
+/* ------------ Leaves Tab (with Paid Leave Calculation) ------------ */
+function LeavesTab({leaves, leaveCalc}) {
+  const {
+    allottedCL = 0,
+    allottedSL = 0,
+    usedCL = 0,
+    usedSL = 0,
+    availCL = 0,
+    availSL = 0
+  } = leaveCalc || {};
 
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <div className="tabbar">
-          {['All','Present','WFH','On Leave','Absent'].map(t=>(
-            <div
-              key={t}
-              className={`tab ${t===filter?'active':''}`}
-              onClick={()=>setFilter(t)}
-            >
-              {t}
-            </div>
-          ))}
-        </div>
-        <div>
-          <input
-            className="search"
-            placeholder="Search by date"
-            value={q}
-            onChange={(e)=>setQ(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="card" style={{marginTop:12}}>
+      {/* Paid Leave Calculation */}
+      <div className="card">
+        <div className="paid-leave-title">Paid Leave Calculation</div>
         <table>
           <thead>
-            <tr><th>Date</th><th>Status</th><th>In</th><th>Out</th></tr>
+            <tr>
+              <th>Leave</th>
+              <th>Casual Leave (CL)</th>
+              <th>Sick Leave (SL)</th>
+            </tr>
           </thead>
           <tbody>
-            {rows.map((r,i)=>(
-              <tr key={i}>
-                <td>{r.date}</td>
-                <td>{r.status}</td>
-                <td>{r.timeIn}</td>
-                <td>{r.timeOut}</td>
-              </tr>
-            ))}
+            <tr>
+              <td>Allotted Leave</td>
+              <td>{allottedCL}</td>
+              <td>{allottedSL}</td>
+            </tr>
+            <tr>
+              <td>Used Leave</td>
+              <td>{usedCL}</td>
+              <td>{usedSL}</td>
+            </tr>
+            <tr>
+              <td>Available Leave</td>
+              <td>{availCL}</td>
+              <td>{availSL}</td>
+            </tr>
           </tbody>
         </table>
+        <div className="paid-leave-note">
+          Note: Each month, 0.5 days of Sick Leave and 0.5 days of Casual Leave are credited to your
+          account. Advance leave is not provided. You can save your leave days to take them together.
+        </div>
       </div>
-    </div>
-  );
-}
 
-function LeavesTab({leaves}) {
-  return (
-    <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+      {/* My Leaves table */}
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:16}}>
         <h3>My Leaves</h3>
         <button className="btn" onClick={()=>alert('Apply leave (future feature)')}>Apply Leave</button>
       </div>
@@ -488,25 +510,60 @@ function LeavesTab({leaves}) {
   );
 }
 
-function PayrollTab({payroll}) {
+/* ------------ Weekly Agenda Tab (NEW) ------------ */
+function WeeklyAgendaTab({weeklyAgenda}) {
   return (
     <div>
-      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-        <h3>Payroll</h3>
-        <button className="btn" onClick={()=>alert('Run payroll (admin feature)')}>Run Payroll</button>
-      </div>
+      <h3>Weekly Agenda</h3>
       <div className="card">
         <table>
           <thead>
-            <tr><th>Pay Period</th><th>Gross</th><th>Net</th><th>Status</th></tr>
+            <tr>
+              <th>Task No</th>
+              <th>Task Details</th>
+              <th>Assigner Email Id</th>
+              <th>Assignee Email Id</th>
+              <th>Initial Target Date</th>
+              <th>Revised Target Date 1</th>
+              <th>Revised Target Date 2</th>
+              <th>Revised Target Date 3</th>
+              <th>Revised Target Date 4</th>
+              <th>Revised Target Date 5</th>
+              <th>Submission Type</th>
+              <th>Completion Status %</th>
+              <th>Update Remarks</th>
+              <th>Completion Date</th>
+              <th>Verification Remarks</th>
+              <th>Verified Completion Date</th>
+              <th>Column1</th>
+              <th>Update Link</th>
+            </tr>
           </thead>
           <tbody>
-            {payroll.map((p,i)=>(
+            {weeklyAgenda.map((r,i)=>(
               <tr key={i}>
-                <td>{p.period}</td>
-                <td>{p.gross}</td>
-                <td>{p.net}</td>
-                <td>{p.status}</td>
+                <td>{r.taskNo}</td>
+                <td>{r.taskDetails}</td>
+                <td>{r.assignerEmail}</td>
+                <td>{r.assigneeEmail}</td>
+                <td>{r.initialTarget}</td>
+                <td>{r.revised1}</td>
+                <td>{r.revised2}</td>
+                <td>{r.revised3}</td>
+                <td>{r.revised4}</td>
+                <td>{r.revised5}</td>
+                <td>{r.submissionType}</td>
+                <td>{r.completionPercent}</td>
+                <td>{r.updateRemarks}</td>
+                <td>{r.completionDate}</td>
+                <td>{r.verificationRemarks}</td>
+                <td>{r.verifiedCompletionDate}</td>
+                <td>{r.column1}</td>
+                <td>
+                  {r.updateLink
+                    ? <a href={r.updateLink} target="_blank" rel="noreferrer">Open</a>
+                    : ''}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -516,25 +573,7 @@ function PayrollTab({payroll}) {
   );
 }
 
-function HTMTab() {
-  return (
-    <div>
-      <h3>HTM Codes (Static)</h3>
-      <div className="card">
-        <table>
-          <thead>
-            <tr><th>Code</th><th>Description</th><th>Eligibility</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>HTM010</td><td>Full-Time Annual Leave</td><td>All FT employees</td></tr>
-            <tr><td>HTM020</td><td>Sick Leave</td><td>All employees</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
+/* ------------ Profile Tab ------------ */
 function ProfileTab({employee}) {
   if(!employee) {
     return <div className="card">Employee not found in Excel. Check Employees table for your email.</div>;
@@ -602,8 +641,9 @@ function App() {
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
-  const [payroll, setPayroll] = useState([]);
+  const [weeklyAgenda, setWeeklyAgenda] = useState([]); // NEW
   const [currentEmployee, setCurrentEmployee] = useState(null);
+  const [leaveCalc, setLeaveCalc] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -637,7 +677,8 @@ function App() {
         setCurrentEmployee,
         setAttendance,
         setLeaves,
-        setPayroll
+        setWeeklyAgenda,
+        setLeaveCalc
       });
     } catch (e) {
       console.error(e);
@@ -653,7 +694,8 @@ function App() {
       setCurrentEmployee,
       setAttendance,
       setLeaves,
-      setPayroll
+      setWeeklyAgenda,
+      setLeaveCalc
     } = setters;
 
     try {
@@ -761,9 +803,17 @@ function App() {
               "",
             name: r["Emp Name"] || r.EmpName || "",
             date: formatExcelDate(rawDate),
+            dateObj: excelToJSDate(rawDate),
+            day: r["Day"] || r.Day || "",
             status: r["Status"] || r.Status || "",
             timeIn: formatExcelTime(rawTimeIn),
-            timeOut: formatExcelTime(rawTimeOut)
+            timeOut: formatExcelTime(rawTimeOut),
+            lateHours:
+              r["Late Hours"] ||
+              r["Late Hour"] ||
+              r.LateHours ||
+              r["LateHours"] ||
+              ""
           };
         });
 
@@ -807,25 +857,77 @@ function App() {
         setLeaves(mapped);
       }
 
-      /* ===== 4) PAYROLL TABLE ===== */
-      const payrollRows = await window.fetchOneDriveTable("payroll").catch(() => null);
-      if (payrollRows && payrollRows.length) {
-        let mapped = payrollRows.map((r) => ({
-          name: r["Employee"] || r.Name || "",
-          period: r["Pay Period"] || r.PayPeriod || "",
-          gross: r["Gross"] || r.Gross || 0,
-          net: r["Net"] || r.Net || 0,
-          status: r["Status"] || r.Status || ""
+      /* ===== 4) LEAVE CALCULATION TABLE ===== */
+      const calcRows = await window.fetchOneDriveTable("Leave_Calculation").catch(() => null);
+      if (calcRows && calcRows.length) {
+        let myCalcRow =
+          calcRows.find(r => normalizeFn(
+            r["Employee Id"] || r["Employee ID"] || r.EmployeeId || ""
+          ) === myId) || null;
+
+        if (!myCalcRow && myName) {
+          myCalcRow = calcRows.find(r => normalizeFn(r["Name"] || r.Name || "") === myName) || null;
+        }
+
+        if (myCalcRow) {
+          const totalLeaves = Number(myCalcRow["Total Leaves"] || 0);
+          const allottedCL = totalLeaves / 2;
+          const allottedSL = totalLeaves / 2;
+          const usedCL = Number(myCalcRow["Casual Leave (CL)"] || 0);
+          const usedSL = Number(myCalcRow["Sick Leave (SL)"] || 0);
+          const availCL = Math.max(0, allottedCL - usedCL);
+          const availSL = Math.max(0, allottedSL - usedSL);
+
+          setLeaveCalc({
+            allottedCL,
+            allottedSL,
+            usedCL,
+            usedSL,
+            availCL,
+            availSL
+          });
+        } else {
+          setLeaveCalc(null);
+        }
+      } else {
+        setLeaveCalc(null);
+      }
+
+      /* ===== 5) WEEKLY AGENDA TABLE ===== */
+      const agendaRows = await window.fetchOneDriveTable("weeklyAgenda").catch(() => null);
+      if (agendaRows && agendaRows.length) {
+        let mapped = agendaRows.map(r => ({
+          taskNo: r["Task No"] || r.TaskNo || "",
+          taskDetails: r["Task Details"] || r.TaskDetails || "",
+          assignerEmail: r["Assigner Email Id"] || r.AssignerEmailId || "",
+          assigneeEmail: r["Assignee Email Id"] || r.AssigneeEmailId || "",
+          initialTarget: formatExcelDate(r["Initial Target Date"] || r.InitialTargetDate || ""),
+          revised1: formatExcelDate(r["Revised Target Date 1"] || r.RevisedTargetDate1 || ""),
+          revised2: formatExcelDate(r["Revised Target Date 2"] || r.RevisedTargetDate2 || ""),
+          revised3: formatExcelDate(r["Revised Target Date 3"] || r.RevisedTargetDate3 || ""),
+          revised4: formatExcelDate(r["Revised Target Date 4"] || r.RevisedTargetDate4 || ""),
+          revised5: formatExcelDate(r["Revised Target Date 5"] || r.RevisedTargetDate5 || ""),
+          submissionType: r["Submission Type"] || r.SubmissionType || "",
+          completionPercent: r["Completion Status %"] || r.CompletionStatus || "",
+          updateRemarks: r["Update Remarks"] || r.UpdateRemarks || "",
+          completionDate: formatExcelDate(r["Completion Date"] || r.CompletionDate || ""),
+          verificationRemarks: r["Verification Remarks"] || r.VerificationRemarks || "",
+          verifiedCompletionDate: formatExcelDate(r["Verified Completion Date"] || r.VerifiedCompletionDate || ""),
+          column1: r["Column1"] || r.Column1 || "",
+          updateLink: r["Update Link"] || r.UpdateLink || ""
         }));
 
-        if (myName) {
+        if (lowerEmail) {
           mapped = mapped.filter(
-            (p) => normalizeFn(p.name) === myName
+            a => normalizeFn(a.assigneeEmail) === lowerEmail
           );
         }
 
-        setPayroll(mapped);
+        setWeeklyAgenda(mapped);
+      } else {
+        setWeeklyAgenda([]);
       }
+
     } catch (err) {
       console.error("Live data load failed", err);
       setError("Error loading data from Excel. Check console for details.");
@@ -840,7 +942,8 @@ function App() {
     setEmployees([]);
     setAttendance([]);
     setLeaves([]);
-    setPayroll([]);
+    setWeeklyAgenda([]);
+    setLeaveCalc(null);
     setActiveTab('Overview');
   }
 
@@ -864,11 +967,9 @@ function App() {
           </div>
         </div>
 
-        {activeTab === 'Overview' && <Overview attendance={attendance} leaves={leaves} payroll={payroll} />}
-        {activeTab === 'Attendance' && <AttendanceTab attendance={attendance} />}
-        {activeTab === 'Leaves' && <LeavesTab leaves={leaves} />}
-        {activeTab === 'Payroll' && <PayrollTab payroll={payroll} />}
-        {activeTab === 'HTM Codes' && <HTMTab />}
+        {activeTab === 'Overview' && <Overview attendance={attendance} leaves={leaves} />}
+        {activeTab === 'Leaves' && <LeavesTab leaves={leaves} leaveCalc={leaveCalc} />}
+        {activeTab === 'Weekly Agenda' && <WeeklyAgendaTab weeklyAgenda={weeklyAgenda} />}
         {activeTab === 'Profile' && <ProfileTab employee={employee} />}
 
         <footer>
