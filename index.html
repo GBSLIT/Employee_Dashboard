@@ -317,13 +317,13 @@ function LoginPage({ onSignIn, error }) {
     <div className="login-wrap">
       <div className="login-card">
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12}}>
-          <div style={{fontSize:20,fontWeight:700}}>Employee Dashboard</div>
+          <div style={{fontSize:20,fontWeight:700}}>Global Base — Employee Dashboard</div>
           <div style={{color:'var(--muted)',fontSize:13}}>Sign in with Microsoft 365</div>
         </div>
 
         <h2 style={{marginTop:6}}>Sign in</h2>
         <p className="small">
-          Use your company email (Microsoft 365 account). Data will be filtered to your records only.
+          Use your company email (Microsoft 365 account).
         </p>
 
         {error && (
@@ -351,7 +351,7 @@ function Sidebar({ current, onSelect, onLogout, user }) {
   const tabs = ['Attendance','Leaves','Weekly Agenda','Profile'];
   return (
     <div className="sidebar">
-      <div className="logo">Acme Corp</div>
+      <div className="logo">Global Base</div>
       <div className="muted">Employee Dashboard</div>
       <div className="nav">
         {tabs.map(t=>(
@@ -1024,18 +1024,10 @@ function App() {
           assignerEmail: r["Assigner Email Id"] || r.AssignerEmailId || "",
           assigneeEmail: r["Assignee Email Id"] || r.AssigneeEmailId || "",
           initialTarget: formatExcelDate(r["Initial Target Date"] || r.InitialTargetDate || ""),
-          rev1: formatExcelDate(r["Revised Target Date 1"] || r.RevisedTargetDate1 || ""),
-          rev2: formatExcelDate(r["Revised Target Date 2"] || r.RevisedTargetDate2 || ""),
-          rev3: formatExcelDate(r["Revised Target Date 3"] || r.RevisedTargetDate3 || ""),
-          rev4: formatExcelDate(r["Revised Target Date 4"] || r.RevisedTargetDate4 || ""),
-          rev5: formatExcelDate(r["Revised Target Date 5"] || r.RevisedTargetDate5 || ""),
           submissionType: r["Submission Type"] || r.SubmissionType || "",
           completionPercent: r["Completion Status %"] || r.CompletionStatus || "",
           updateRemarks: r["Update Remarks"] || r.UpdateRemarks || "",
           completionDate: formatExcelDate(r["Completion Date"] || r.CompletionDate || ""),
-          verificationRemarks: r["Verification Remarks"] || r.VerificationRemarks || "",
-          verifiedCompletionDate: formatExcelDate(r["Verified Completion Date"] || r.VerifiedCompletionDate || ""),
-          column1: r["Column1"] || r.Column1 || "",
           updateLink: r["Update Link"] || r.UpdateLink || ""
         }));
 
@@ -1076,8 +1068,8 @@ function App() {
       <div className="main">
         <div className="header">
           <div>
-            <div style={{fontSize:22,fontWeight:700}}>Employee Dashboard — Personal View</div>
-            <div className="muted">Data filtered for <strong>{user.email}</strong></div>
+            <div style={{fontSize:22,fontWeight:700}}>Global Base — Employee Dashboard</div>
+            <div className="muted">Data for <strong>{user.email}</strong></div>
           </div>
           <div style={{display:'flex', gap:12, alignItems:'center'}}>
             {loading && <div className="small muted">Refreshing data…</div>}
@@ -1099,7 +1091,7 @@ function App() {
 
         <footer>
           <div className="muted">
-            Live data from OneDrive Excel — rows are restricted to your email account.
+            Global Base — Employee Dashboard Created by GBSL IT.
           </div>
         </footer>
       </div>
@@ -1113,5 +1105,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
