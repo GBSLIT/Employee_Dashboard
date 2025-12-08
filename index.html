@@ -603,18 +603,10 @@ function WeeklyAgendaPage({ items }) {
               <th>Assigner Email Id</th>
               <th>Assignee Email Id</th>
               <th>Initial Target Date</th>
-              <th>Revised Target Date 1</th>
-              <th>Revised Target Date 2</th>
-              <th>Revised Target Date 3</th>
-              <th>Revised Target Date 4</th>
-              <th>Revised Target Date 5</th>
               <th>Submission Type</th>
               <th>Completion Status %</th>
               <th>Update Remarks</th>
               <th>Completion Date</th>
-              <th>Verification Remarks</th>
-              <th>Verified Completion Date</th>
-              <th>Column1</th>
               <th>Update Link</th>
             </tr>
           </thead>
@@ -730,10 +722,10 @@ function ProfilePage({ employee }) {
         <div className="qa-buttons">
           <button className="btn" onClick={()=>alert('Mark Attendance (future)')}>Mark Attendance</button>
           <button className="btn" onClick={()=>alert('Apply Leave (future)')}>Apply Leave</button>
-          <button className="btn-outline" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
-          <button className="btn-outline" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
-          <button className="btn-outline" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
-          <button className="btn-outline" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
+          <button className="btn" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
+          <button className="btn" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
+          <button className="btn-" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
+          <button className="btn" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
         </div>
       </div>
     </div>
@@ -1129,3 +1121,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
