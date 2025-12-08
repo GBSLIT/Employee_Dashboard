@@ -551,7 +551,7 @@ function LeavesPage({ leaves, leaveSummary }) {
       <div className="card">
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <strong>My Leaves</strong>
-          <button className="btn-outline" onClick={()=>alert('Apply Leave (future feature)')}>
+          <button className="btn" onClick={()=>alert('Apply Leave (future feature)')}>
             Apply Leave
           </button>
         </div>
@@ -618,18 +618,10 @@ function WeeklyAgendaPage({ items }) {
                 <td>{r.assignerEmail}</td>
                 <td>{r.assigneeEmail}</td>
                 <td>{r.initialTarget}</td>
-                <td>{r.rev1}</td>
-                <td>{r.rev2}</td>
-                <td>{r.rev3}</td>
-                <td>{r.rev4}</td>
-                <td>{r.rev5}</td>
                 <td>{r.submissionType}</td>
                 <td>{r.completionPercent}</td>
                 <td>{r.updateRemarks}</td>
                 <td>{r.completionDate}</td>
-                <td>{r.verificationRemarks}</td>
-                <td>{r.verifiedCompletionDate}</td>
-                <td>{r.column1}</td>
                 <td>
                   {r.updateLink ? (
                     <a href={r.updateLink} target="_blank" rel="noopener noreferrer">Open</a>
@@ -724,7 +716,7 @@ function ProfilePage({ employee }) {
           <button className="btn" onClick={()=>alert('Apply Leave (future)')}>Apply Leave</button>
           <button className="btn" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
           <button className="btn" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
-          <button className="btn-" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
+          <button className="btn" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
           <button className="btn" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
         </div>
       </div>
@@ -1121,4 +1113,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
