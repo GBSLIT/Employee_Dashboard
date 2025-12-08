@@ -1004,18 +1004,11 @@ function App() {
           assignerEmail: r["Assigner Email Id"] || r.AssignerEmailId || "",
           assigneeEmail: r["Assignee Email Id"] || r.AssigneeEmailId || "",
           initialTarget: formatExcelDate(r["Initial Target Date"] || r.InitialTargetDate || ""),
-          rev1: formatExcelDate(r["Revised Target Date 1"] || r.RevisedTargetDate1 || ""),
-          rev2: formatExcelDate(r["Revised Target Date 2"] || r.RevisedTargetDate2 || ""),
-          rev3: formatExcelDate(r["Revised Target Date 3"] || r.RevisedTargetDate3 || ""),
-          rev4: formatExcelDate(r["Revised Target Date 4"] || r.RevisedTargetDate4 || ""),
-          rev5: formatExcelDate(r["Revised Target Date 5"] || r.RevisedTargetDate5 || ""),
           submissionType: r["Submission Type"] || r.SubmissionType || "",
           completionPercent: r["Completion Status %"] || r.CompletionStatus || "",
           updateRemarks: r["Update Remarks"] || r.UpdateRemarks || "",
           completionDate: formatExcelDate(r["Completion Date"] || r.CompletionDate || ""),
           verificationRemarks: r["Verification Remarks"] || r.VerificationRemarks || "",
-          verifiedCompletionDate: formatExcelDate(r["Verified Completion Date"] || r.VerifiedCompletionDate || ""),
-          column1: r["Column1"] || "",
           updateLink: r["Update Link"] || r.UpdateLink || ""
         }));
 
@@ -1096,3 +1089,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
