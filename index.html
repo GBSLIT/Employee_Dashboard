@@ -264,6 +264,13 @@
 
 <script type="text/babel">
 const { useState } = React;
+const APPLY_LEAVE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf0k4lKKmwB8LWmzPxEb07Q_X-zT8-sSDghHl79wHvtXLSDeA/viewform";
+// TEMP LINKS – replace later
+const MARK_ATTENDANCE_URL = "https://script.google.com/a/macros/globalbasesourcing.com/s/AKfycbzqqbsaeEpvXupmGG8ew95qckMPPRY3CyhJu1Fwn5jHR6ugAIrow6eSjNSRrAihxxiaCA/exec";
+const IT_HELP_TICKET_URL = "https://docs.google.com/forms/d/e/1FAIpQLScDeECNtU4AY66ExE7nP2k_fGoA0iz9jFpSMxvaZDeSsNtP7Q/viewform";
+const HIRING_REQUEST_URL = "https://docs.google.com/forms/d/e/1FAIpQLSemLc4jVjHElByCmLZPZM6VvgTvs9blMMUIHi-2dO3lQdWVSw/viewform";
+const MONTHLY_FEEDBACK_URL = "https://docs.google.com/forms/d/e/1FAIpQLSfuKxR0xg60CaTSpQDa2XAt9qcdQQMy37Vkryy1mX5N6xdbiA/viewform";
+const COMPANY_POLICIES_URL = "https://gbslhk-my.sharepoint.com/:p:/g/personal/hr_globalbasesourcing_com/IQApL-QNk4FES6MunLz973sMAapBWR7Xderr-gtTxvGqCDw?e=GpOs5P";
 
 /* ---------- Excel Date / Time Helpers ---------- */
 function excelSerialToDate(value){
@@ -551,9 +558,12 @@ function LeavesPage({ leaves, leaveSummary }) {
       <div className="card">
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <strong>My Leaves</strong>
-          <button className="btn" onClick={()=>alert('Apply Leave (future feature)')}>
-            Apply Leave
-          </button>
+          <button
+  className="btn"
+  onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
+>
+  Apply Leave
+</button>
         </div>
         <table>
           <thead>
@@ -712,13 +722,49 @@ function ProfilePage({ employee }) {
       <div className="card profile-card">
         <strong>Quick Actions</strong>
         <div className="qa-buttons">
-          <button className="btn" onClick={()=>alert('Mark Attendance (future)')}>Mark Attendance</button>
-          <button className="btn" onClick={()=>alert('Apply Leave (future)')}>Apply Leave</button>
-          <button className="btn" onClick={()=>alert('IT Help Ticket (future)')}>IT Help Ticket</button>
-          <button className="btn" onClick={()=>alert('Raise Hiring Request (future)')}>Raise Hiring Request</button>
-          <button className="btn" onClick={()=>alert('GBSL Monthly Feedback (future)')}>GBSL Monthly Feedback</button>
-          <button className="btn" onClick={()=>alert('Company Policies (future)')}>Company Policies</button>
-        </div>
+  <button
+    className="btn"
+    onClick={() => window.open(MARK_ATTENDANCE_URL, "_blank")}
+  >
+    Mark Attendance
+  </button>
+
+  <button
+    className="btn"
+    onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
+  >
+    Apply Leave
+  </button>
+
+  <button
+    className="btn"
+    onClick={() => window.open(IT_HELP_TICKET_URL, "_blank")}
+  >
+    IT Help Ticket
+  </button>
+
+  <button
+    className="btn"
+    onClick={() => window.open(HIRING_REQUEST_URL, "_blank")}
+  >
+    Raise Hiring Request
+  </button>
+
+  <button
+    className="btn"
+    onClick={() => window.open(MONTHLY_FEEDBACK_URL, "_blank")}
+  >
+    GBSL Monthly Feedback
+  </button>
+
+  <button
+    className="btn"
+    onClick={() => window.open(COMPANY_POLICIES_URL, "_blank")}
+  >
+    Company Policies
+  </button>
+</div>
+
       </div>
     </div>
   );
@@ -1105,6 +1151,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
