@@ -379,8 +379,17 @@ function Sidebar({ current, onSelect, onLogout, user }) {
   const tabs = ['Attendance','Leaves','Weekly Agenda','Profile'];
   return (
     <div className="sidebar">
-      <div className="logo">Global Base</div>
-      <div className="muted">Employee Dashboard</div>
+      <div>
+  <div className="logo">
+    <img
+      src="https://your-domain.com/path/to/logo.png"  // 🔁 put your logo URL or relative path
+      alt="Global Base"
+      className="logo-img"
+    />
+    <span>Global Base</span>
+  </div>
+  <div className="muted">Employee Dashboard</div>
+</div>
       <div className="nav">
         {tabs.map(t=>(
           <button
@@ -1172,6 +1181,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
