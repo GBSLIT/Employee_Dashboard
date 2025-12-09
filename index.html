@@ -491,7 +491,19 @@ function AttendancePage({ attendance, leaves }) {
                 <td>{r.day}</td>
                 <td>{r.timeIn}</td>
                 <td>{r.timeOut}</td>
-                <td>{r.lateHours}</td>
+                <td
+  style={{
+    color:
+      r.lateHours === "On Time"
+        ? "#16a34a"   // green
+        : r.lateHours
+        ? "#dc2626"   // red
+        : "inherit"
+  }}
+>
+  {r.lateHours}
+</td>
+
                 <td>{r.status}</td>
               </tr>
             ))}
@@ -1193,6 +1205,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
