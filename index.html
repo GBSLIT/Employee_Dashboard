@@ -733,7 +733,7 @@ function ProfilePage({ employee }) {
   return (
     <div className="profile-layout">
       <div className="card profile-card">
-          <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'center',marginBottom:16,max-width: 350px;}}>
           <div className="profile-avatar">
             {employee.photoUrl ? (
               <img src={employee.photoUrl} alt={employee.name} />
@@ -1216,6 +1216,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
