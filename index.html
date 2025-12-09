@@ -388,7 +388,7 @@ function LoginPage({ onSignIn, error }) {
 
 /* ------------ Sidebar ------------ */
 function Sidebar({ current, onSelect, onLogout, user }) {
-  const tabs = ['Attendance','Leaves','Weekly Agenda','Profile'];
+  const tabs = ['Weekly Agenda','Attendance','Leaves','Profile'];
   return (
     <div className="sidebar">
       <div>
@@ -815,7 +815,7 @@ function ProfilePage({ employee }) {
 /* ------------ App ------------ */
 function App() {
   const [user, setUser] = useState(null);          // { email, name }
-  const [activeTab, setActiveTab] = useState('Attendance');
+  const [activeTab, setActiveTab] = useState('Weekly Agenda');
   const [employees, setEmployees] = useState([]);
   const [attendance, setAttendance] = useState([]);
   const [leaves, setLeaves] = useState([]);
@@ -850,7 +850,7 @@ function App() {
 
       const name = account.name || email;
       setUser({ email, name });
-      setActiveTab('Attendance');
+      setActiveTab('Weekly Agenda');
 
       await loadLiveDataFor(email);
     } catch (e) {
@@ -1193,6 +1193,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
