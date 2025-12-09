@@ -226,38 +226,48 @@
     }
   }
 
-  // Fetch Excel table and return array of objects
+  // NEW: Fetch worksheet usedRange(valuesOnly=true) and convert to array of objects
   window.fetchOneDriveTable = async function(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
     const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
 
-    // columns
-    const colRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/columns`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if(!colRes.ok) {
-      const txt = await colRes.text().catch(()=> '');
-      throw new Error("Columns fetch failed: " + colRes.status + " " + txt);
-    }
-    const colJson = await colRes.json();
-    const columns = colJson.value.map(c => c.name);
+    // worksheet usedRange (valuesOnly=true) returns { values: [ [hdr1,hdr2...], [r1c1,r1c2...], ... ] }
+    // escape single quotes inside sheet name by doubling them (Graph rule: worksheets('name'))
+    const sheetNameEsc = ('' + tableName).replace(/'/g, "''");
+    const url = `${base}/worksheets('${sheetNameEsc}')/usedRange(valuesOnly=true)`;
 
-    // rows
-    const rowRes = await fetch(`${base}/tables/${encodeURIComponent(tableName)}/rows`, {
-      headers: { Authorization: `Bearer ${token}` }
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
     });
-    if(!rowRes.ok) {
-      const txt = await rowRes.text().catch(()=> '');
-      throw new Error("Rows fetch failed: " + rowRes.status + " " + txt);
+
+    if (!res.ok) {
+      const txt = await res.text().catch(()=>'');
+      throw new Error(`usedRange fetch failed: ${res.status} ${txt}`);
     }
-    const rowJson = await rowRes.json();
-    const rows = (rowJson.value || []).map(r => {
-      const vals = (r.values && r.values[0]) ? r.values[0] : [];
+
+    const json = await res.json();
+    const vals = json && json.values ? json.values : [];
+
+    if (!vals || vals.length === 0) return [];
+
+    // first row = headers
+    const headers = vals[0].map(h => h === undefined || h === null ? '' : String(h).trim());
+
+    // map rows -> objects
+    const rows = vals.slice(1).map(row => {
       const obj = {};
-      for (let i=0; i<columns.length; i++) obj[columns[i]] = vals[i] ?? null;
+      for (let i=0;i<headers.length;i++) {
+        // use header string as key; empty header => skip
+        const key = headers[i] || `Column${i+1}`;
+        obj[key] = (row && row[i] !== undefined) ? row[i] : null;
+      }
       return obj;
     });
+
     return rows;
   };
 
@@ -275,6 +285,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
+/* ---------- rest of your code unchanged (copied exactly as you provided) ---------- */
 const { useState } = React;
 const APPLY_LEAVE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf0k4lKKmwB8LWmzPxEb07Q_X-zT8-sSDghHl79wHvtXLSDeA/viewform";
 // TEMP LINKS – replace later
@@ -1205,36 +1216,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
