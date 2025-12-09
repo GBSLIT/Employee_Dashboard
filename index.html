@@ -24,13 +24,19 @@
       position:sticky; top:0; height:100vh; box-sizing:border-box;
     }
 
-    .logo { font-weight:700; font-size:18px; margin-bottom:18px; }
-    .nav { margin-top:18px; display:flex; flex-direction:column; gap:6px; }
-    .nav button {
-      text-align:left; background:none; border:none;
-      padding:10px 12px; border-radius:10px;
-      cursor:pointer; color:#0f172a; font-weight:500;
-    }
+    .logo{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:700;
+  font-size:18px;
+  margin-bottom:18px;
+}
+.logo img{
+  height:28px;    /* control size here */
+  width:auto;
+  display:block;
+}
     .nav button:hover{ background:#f1f5f9; }
     .nav .active{
       background:linear-gradient(90deg, rgba(37,99,235,0.1), rgba(80,123,255,0.03));
@@ -1181,6 +1187,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
+
 
 
 
