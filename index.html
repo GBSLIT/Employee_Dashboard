@@ -25,24 +25,24 @@
     }
 
     .logo{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-weight:700;
-  font-size:18px;
-  margin-bottom:18px;
-}
-.nav { margin-top:18px; display:flex; flex-direction:column; gap:6px; }
-.nav button {
-  text-align:left; background:none; border:none;
-  padding:10px 12px; border-radius:10px;
-  cursor:pointer; color:#0f172a; font-weight:500;
-}
-.logo img{
-  height:68px;    /* control size here */
-  width:auto;
-  display:block;
-}
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:700;
+      font-size:18px;
+      margin-bottom:18px;
+    }
+    .nav { margin-top:18px; display:flex; flex-direction:column; gap:6px; }
+    .nav button {
+      text-align:left; background:none; border:none;
+      padding:10px 12px; border-radius:10px;
+      cursor:pointer; color:#0f172a; font-weight:500;
+    }
+    .logo img{
+      height:68px;    /* control size here */
+      width:auto;
+      display:block;
+    }
     .nav button:hover{ background:#f1f5f9; }
     .nav .active{
       background:linear-gradient(90deg, rgba(37,99,235,0.1), rgba(80,123,255,0.03));
@@ -65,7 +65,7 @@
       padding:16px; box-shadow: 0 8px 28px rgba(15,23,42,0.03);
       margin-top:16px;
     }
-    
+
     .row { display:flex; gap:16px; align-items:flex-start; }
     .col-2 { display:flex; flex-direction:column; gap:16px; flex:1; }
     table { width:100%; border-collapse:collapse; margin-top:12px; }
@@ -169,7 +169,7 @@
       flex-direction:column;
       gap:10px;
       margin-top:8px;
-         }
+    }
   </style>
 </head>
 
@@ -208,60 +208,72 @@
 
   const msalInstance = new msal.PublicClientApplication(msalConfig);
 
-  // === RESILIENT getToken (drop-in replacement) ===
-  // tries silent first and falls back to popup once when needed.
-  async function getToken({ forceRefresh = false } = {}) {
-    // pick an account if present
-    const accounts = msalInstance.getAllAccounts();
-    let account = accounts && accounts.length ? accounts[0] : null;
+  // NEW: do not auto-popup; try silent only and return null if not available
+  async function getToken() {
+    // Try to get cached account first
+    let account = msalInstance.getAllAccounts()[0];
 
     if (!account) {
-      // interactive sign-in if no account
-      const loginResult = await msalInstance.loginPopup({ scopes: SCOPES });
-      account = loginResult && loginResult.account ? loginResult.account : null;
+      // no account in cache - do not auto-open popup here.
+      console.debug("[auth] No MSAL account found in cache.");
+      return null;
     }
 
     try {
+      // Attempt silent token acquisition (standard & recommended)
       const tokenResponse = await msalInstance.acquireTokenSilent({
         scopes: SCOPES,
-        account,
-        forceRefresh
+        account
       });
-      return tokenResponse && tokenResponse.accessToken ? tokenResponse.accessToken : null;
-    } catch (silentErr) {
-      // fallback once to popup
+      return tokenResponse.accessToken;
+    } catch (err) {
+      // silent acquisition failed (expired / interaction required / same-site cookies blocked)
+      // We will NOT auto-call loginPopup here (prevents unexpected prompt on refresh).
+      console.warn("[auth] acquireTokenSilent failed:", err);
+      return null;
+    }
+  }
+
+  // small fetch-with-retry util used by auto-refresh
+  async function fetchWithRetry(url, opts = {}, retries = 2, baseDelay = 600) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
       try {
-        const popResp = await msalInstance.acquireTokenPopup({ scopes: SCOPES, account });
-        return popResp && popResp.accessToken ? popResp.accessToken : null;
-      } catch (popupErr) {
-        console.error("getToken: acquireTokenPopup failed", popupErr);
-        throw popupErr;
+        const r = await fetch(url, opts);
+        if (!r.ok) {
+          const txt = await r.text().catch(()=>'');
+          const err = new Error(`HTTP ${r.status} ${txt}`);
+          err.status = r.status;
+          throw err;
+        }
+        return r;
+      } catch (err) {
+        if (attempt === retries) throw err;
+        const wait = baseDelay * Math.pow(2, attempt);
+        console.warn(`fetchWithRetry attempt ${attempt+1} failed, retrying in ${wait}ms`, err);
+        await new Promise(r=>setTimeout(r, wait));
       }
     }
   }
 
-  // NEW: Fetch worksheet usedRange(valuesOnly=true) and convert to array of objects
+  // Fetch worksheet usedRange(valuesOnly=true) and convert to array of objects
   window.fetchOneDriveTable = async function(tableKeyOrName) {
     const tableName = TABLES[tableKeyOrName] || tableKeyOrName;
     const token = await getToken();
+    if (!token) {
+      throw new Error("No access token available (silent acquisition failed).");
+    }
     const base = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}/workbook`;
 
-    // worksheet usedRange (valuesOnly=true) returns { values: [ [hdr1,hdr2...], [r1c1,r1c2...], ... ] }
     // escape single quotes inside sheet name by doubling them (Graph rule: worksheets('name'))
     const sheetNameEsc = ('' + tableName).replace(/'/g, "''");
     const url = `${base}/worksheets('${sheetNameEsc}')/usedRange(valuesOnly=true)`;
 
-    const res = await fetch(url, {
+    const res = await fetchWithRetry(url, {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/json'
       }
-    });
-
-    if (!res.ok) {
-      const txt = await res.text().catch(()=>'');
-      throw new Error(`usedRange fetch failed: ${res.status} ${txt}`);
-    }
+    }, 2, 600);
 
     const json = await res.json();
     const vals = json && json.values ? json.values : [];
@@ -275,7 +287,6 @@
     const rows = vals.slice(1).map(row => {
       const obj = {};
       for (let i=0;i<headers.length;i++) {
-        // use header string as key; empty header => skip
         const key = headers[i] || `Column${i+1}`;
         obj[key] = (row && row[i] !== undefined) ? row[i] : null;
       }
@@ -290,6 +301,144 @@
     async loginPopup() { return msalInstance.loginPopup({ scopes: SCOPES }); },
     getAccount() { return msalInstance.getAllAccounts()[0] || null; }
   };
+
+  /* ---------- Auto-refresh helpers (robust) ---------- */
+  let __autoRefreshTimer = null;
+  let __lastKnownDriveModified = null;
+  let __autoRefreshRunning = false;
+  let __autoRefreshInProgress = false;
+
+  async function tryWithRetries(fn, retries = 2, baseDelay = 600) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (attempt === retries) throw err;
+        const wait = baseDelay * Math.pow(2, attempt);
+        console.warn(`tryWithRetries: attempt ${attempt+1} failed, retrying in ${wait}ms`, err);
+        await new Promise(r => setTimeout(r, wait));
+      }
+    }
+  }
+
+  async function fetchDriveLastModified() {
+    try {
+      const token = await getToken();
+      if (!token) {
+        console.warn("[auto-refresh] no token available for metadata request");
+        return null;
+      }
+      const url = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}?ts=${Date.now()}`;
+      console.debug("[auto-refresh] fetching drive metadata:", url);
+      const res = await fetchWithRetry(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Cache-Control": "no-cache, no-store",
+          Pragma: "no-cache"
+        }
+      }, 2, 600);
+      const json = await res.json();
+      const last = json && json.lastModifiedDateTime ? json.lastModifiedDateTime : null;
+      console.debug("[auto-refresh] lastModifiedDateTime:", last);
+      return last;
+    } catch (err) {
+      console.warn("fetchDriveLastModified failed:", err);
+      return null;
+    }
+  }
+
+  async function callLoaderWithRetries(email, maxRetries = 2) {
+    if (!email) {
+      console.warn("callLoaderWithRetries: no email provided");
+      return;
+    }
+    // prefer global exposed loader if exists
+    const loader = typeof window.loadLiveDataFor === "function" ? window.loadLiveDataFor : (typeof loadLiveDataFor === "function" ? loadLiveDataFor : null);
+    if (!loader) {
+      console.warn("callLoaderWithRetries: loader not available (not exposed globally)");
+      return;
+    }
+    await tryWithRetries(async () => {
+      console.info(`[auto-refresh] calling loader for ${email}`);
+      await loader(email);
+      console.info("[auto-refresh] loader succeeded for", email);
+    }, maxRetries, 800);
+  }
+
+  function startAutoRefresh(intervalMs = 60000) {
+    stopAutoRefresh();
+    __autoRefreshRunning = true;
+    __lastKnownDriveModified = null;
+
+    (async () => {
+      try {
+        __lastKnownDriveModified = await fetchDriveLastModified();
+        console.debug("[auto-refresh] initial lastModified:", __lastKnownDriveModified);
+      } catch (e) {
+        console.warn("[auto-refresh] initial metadata fetch failed:", e);
+      }
+    })();
+
+    __autoRefreshTimer = setInterval(async () => {
+      if (!__autoRefreshRunning) return;
+      if (__autoRefreshInProgress) return;
+      __autoRefreshInProgress = true;
+
+      try {
+        const last = await fetchDriveLastModified();
+
+        if (last === null) {
+          console.debug("[auto-refresh] metadata fetch returned null; skipping this tick.");
+          return;
+        }
+
+        if (!__lastKnownDriveModified) {
+          console.debug("[auto-refresh] setting lastKnown to", last);
+          __lastKnownDriveModified = last;
+          return;
+        }
+
+        if (last !== __lastKnownDriveModified) {
+          console.info("[auto-refresh] Drive changed:", __lastKnownDriveModified, "=>", last);
+          __lastKnownDriveModified = last;
+
+          const email = window.currentSignedInEmailForAutoRefresh ||
+            (window.msalOneDrive && window.msalOneDrive.getAccount && (() => {
+              const acct = window.msalOneDrive.getAccount();
+              return acct && (acct.username || acct.email || (acct.idTokenClaims && acct.idTokenClaims.preferred_username));
+            })());
+
+          if (email) {
+            const emailStr = ('' + email).toLowerCase();
+            try {
+              await callLoaderWithRetries(emailStr, 2);
+            } catch (loaderErr) {
+              console.error("[auto-refresh] loader still failed after retries:", loaderErr);
+            }
+          } else {
+            console.warn("[auto-refresh] no signed-in email found to call loader with");
+          }
+        } else {
+          console.debug("[auto-refresh] no change detected");
+        }
+      } catch (err) {
+        console.warn("auto refresh tick error:", err);
+      } finally {
+        __autoRefreshInProgress = false;
+      }
+    }, intervalMs);
+  }
+
+  function stopAutoRefresh() {
+    __autoRefreshRunning = false;
+    if (__autoRefreshTimer) {
+      clearInterval(__autoRefreshTimer);
+      __autoRefreshTimer = null;
+    }
+    __autoRefreshInProgress = false;
+  }
+
 </script>
 
 <!-- React UMD -->
@@ -299,8 +448,7 @@
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
 <script type="text/babel">
-/* ---------- rest of your code unchanged (copied and only minimally patched) ---------- */
-const { useState } = React;
+const { useState, useEffect } = React;
 const APPLY_LEAVE_URL = "https://docs.google.com/forms/d/e/1FAIpQLSf0k4lKKmwB8LWmzPxEb07Q_X-zT8-sSDghHl79wHvtXLSDeA/viewform";
 // TEMP LINKS – replace later
 const MARK_ATTENDANCE_URL = "https://script.google.com/a/macros/globalbasesourcing.com/s/AKfycbzqqbsaeEpvXupmGG8ew95qckMPPRY3CyhJu1Fwn5jHR6ugAIrow6eSjNSRrAihxxiaCA/exec";
@@ -354,7 +502,8 @@ function formatExcelDuration(value) {
   }
   return String(value);
 }
-  function formatDisplayDate(value) {
+
+function formatDisplayDate(value) {
   if (value === null || value === undefined || value === "") return "—";
 
   let date = null;
@@ -375,134 +524,6 @@ function formatExcelDuration(value) {
   const year = date.getFullYear();
 
   return `${day}-${month}-${year}`;  // dd-MMM-yyyy
-}
-
-/* ---------- AUTO-REFRESH HELPERS (NEW) ---------- */
-/* Non-invasive auto-refresh that polls drive item's lastModifiedDateTime and refreshes only on change.
-   Safe defaults: 60s interval. Uses existing getToken() and existing loadLiveDataFor() */
-let __autoRefreshTimer = null;
-let __lastKnownDriveModified = null;
-let __autoRefreshRunning = false;
-let __autoRefreshInProgress = false;
-
-/* small retry wrapper (resilient for metadata fetch) */
-async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 600) {
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      const res = await fetch(url, options);
-      if (!res.ok) throw res;
-      return res;
-    } catch (err) {
-      if (attempt === retries) throw err;
-      await new Promise(r => setTimeout(r, delayMs * (attempt + 1)));
-    }
-  }
-}
-
-/* fetch lightweight drive metadata and return lastModifiedDateTime string or null
-   (cache-busting added) */
-async function fetchDriveLastModified() {
-  try {
-    const token = await getToken();
-    // cache-busting param to avoid stale responses from CDN/browser
-    const url = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}?ts=${Date.now()}`;
-    console.debug("[auto-refresh] fetching drive metadata:", url);
-    const res = await fetchWithRetry(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        "Cache-Control": "no-cache, no-store",
-        Pragma: "no-cache"
-      }
-    }, 2, 600);
-    console.debug("[auto-refresh] metadata response status:", res.status);
-    const json = await res.json();
-    console.debug("[auto-refresh] metadata body:", json && { lastModifiedDateTime: json.lastModifiedDateTime });
-    return json && json.lastModifiedDateTime ? json.lastModifiedDateTime : null;
-  } catch (err) {
-    console.warn("fetchDriveLastModified failed:", err);
-    return null;
-  }
-}
-
-/**
- * startAutoRefresh(intervalMs = 60000)
- * - intervalMs: milliseconds (default 60000)
- * - The function avoids overlapping runs and will call loadLiveDataFor(email) when change detected.
- */
-function startAutoRefresh(intervalMs = 60000) {
-  // avoid multiple timers
-  stopAutoRefresh();
-  __autoRefreshRunning = true;
-  __lastKnownDriveModified = null;
-
-  // initialize immediately
-  (async () => {
-    try {
-      __lastKnownDriveModified = await fetchDriveLastModified();
-    } catch (e) {
-      console.warn("initial drive metadata fetch failed:", e);
-    }
-  })();
-
-  __autoRefreshTimer = setInterval(async () => {
-    if (!__autoRefreshRunning) return;
-    if (__autoRefreshInProgress) return; // avoid overlapping
-    __autoRefreshInProgress = true;
-    try {
-      const last = await fetchDriveLastModified();
-      if (!last) return;
-      if (!__lastKnownDriveModified) {
-        __lastKnownDriveModified = last;
-        return;
-      }
-      if (last !== __lastKnownDriveModified) {
-        __lastKnownDriveModified = last;
-        console.info("Drive changed, auto-refreshing data:", last);
-        try {
-          // prefer stored signed-in email if available
-          if (window.currentSignedInEmailForAutoRefresh) {
-            // call the global loader (exposed from inside App)
-            if (typeof window.loadLiveDataFor === "function") {
-              await window.loadLiveDataFor(window.currentSignedInEmailForAutoRefresh);
-            } else {
-              // fallback to using msal account
-              const acct = window.msalOneDrive.getAccount();
-              const email = acct && (acct.username || acct.email || (acct.idTokenClaims && acct.idTokenClaims.preferred_username));
-              if (email) await loadLiveDataFor(email.toLowerCase());
-            }
-          } else {
-            const acct = window.msalOneDrive.getAccount();
-            const email = acct && (acct.username || acct.email || (acct.idTokenClaims && acct.idTokenClaims.preferred_username));
-            if (email) {
-              if (typeof window.loadLiveDataFor === "function") {
-                await window.loadLiveDataFor(email.toLowerCase());
-              } else {
-                await loadLiveDataFor(email.toLowerCase());
-              }
-            }
-          }
-        } catch (e) {
-          console.error("auto-refresh loadLiveDataFor failed:", e);
-        }
-      }
-    } catch (err) {
-      console.warn("auto refresh tick error:", err);
-    } finally {
-      __autoRefreshInProgress = false;
-    }
-  }, intervalMs);
-}
-
-/* stop the auto-refresh */
-function stopAutoRefresh() {
-  __autoRefreshRunning = false;
-  if (__autoRefreshTimer) {
-    clearInterval(__autoRefreshTimer);
-    __autoRefreshTimer = null;
-  }
-  __lastKnownDriveModified = null;
-  __autoRefreshInProgress = false;
 }
 
 /* ------------ Login Card ------------ */
@@ -546,16 +567,16 @@ function Sidebar({ current, onSelect, onLogout, user }) {
   return (
     <div className="sidebar">
       <div>
-  <div className="logo">
-    <img
-      src="gbsl.png"  // 🔁 put your logo URL or relative path
-      alt="Global Base"
-      className="logo-img"
-    />
-    <span></span>
-  </div>
-  <div className="muted">Employee Dashboard</div>
-</div>
+        <div className="logo">
+          <img
+            src="gbsl.png"  // put your logo URL or relative path
+            alt="Global Base"
+            className="logo-img"
+          />
+          <span></span>
+        </div>
+        <div className="muted">Employee Dashboard</div>
+      </div>
       <div className="nav">
         {tabs.map(t=>(
           <button
@@ -571,7 +592,11 @@ function Sidebar({ current, onSelect, onLogout, user }) {
         Signed in as <strong>{user?.name || user?.email || 'Employee'}</strong><br/>
         <span>{user?.email}</span>
       </div>
-      <button onClick={onLogout} className="btn" style={{width:'100%'}}>Sign out</button>
+      <button onClick={()=>{
+        // stop auto-refresh on logout
+        try { stopAutoRefresh(); } catch(e){}
+        onLogout();
+      }} className="btn" style={{width:'100%'}}>Sign out</button>
     </div>
   );
 }
@@ -646,18 +671,17 @@ function AttendancePage({ attendance, leaves }) {
                 <td>{r.timeIn}</td>
                 <td>{r.timeOut}</td>
                 <td
-  style={{
-    color:
-      r.lateHours === "On Time"
-        ? "#16a34a"   // green
-        : r.lateHours
-        ? "#dc2626"   // red
-        : "inherit"
-  }}
->
-  {r.lateHours}
-</td>
-
+                  style={{
+                    color:
+                      r.lateHours === "On Time"
+                        ? "#16a34a"   // green
+                        : r.lateHours
+                        ? "#dc2626"   // red
+                        : "inherit"
+                  }}
+                >
+                  {r.lateHours}
+                </td>
                 <td>{r.status}</td>
               </tr>
             ))}
@@ -767,11 +791,11 @@ function LeavesPage({ leaves, leaveSummary }) {
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
           <strong>My Leaves</strong>
           <button
-  className="btn"
-  onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
->
-  Apply Leave
-</button>
+            className="btn"
+            onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
+          >
+            Apply Leave
+          </button>
         </div>
         <table>
           <thead>
@@ -876,7 +900,7 @@ function ProfilePage({ employee }) {
   return (
     <div className="profile-layout">
       <div className="card profile-card">
-          <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
           <div className="profile-avatar">
             {employee.photoUrl ? (
               <img src={employee.photoUrl} alt={employee.name} />
@@ -885,7 +909,7 @@ function ProfilePage({ employee }) {
                 width:'100%',height:'100%',display:'flex',
                 alignItems:'center',justifyContent:'center',
                 fontSize:36,fontWeight:700,color:'var(--accent)'
-                          }}>
+              }}>
                 {initials}
               </div>
             )}
@@ -930,48 +954,48 @@ function ProfilePage({ employee }) {
       <div className="card profile-card">
         <strong>Quick Actions</strong>
         <div className="qa-buttons">
-  <button
-    className="btn"
-    onClick={() => window.open(MARK_ATTENDANCE_URL, "_blank")}
-  >
-    Mark Attendance
-  </button>
+          <button
+            className="btn"
+            onClick={() => window.open(MARK_ATTENDANCE_URL, "_blank")}
+          >
+            Mark Attendance
+          </button>
 
-  <button
-    className="btn"
-    onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
-  >
-    Apply Leave
-  </button>
+          <button
+            className="btn"
+            onClick={() => window.open(APPLY_LEAVE_URL, "_blank")}
+          >
+            Apply Leave
+          </button>
 
-  <button
-    className="btn"
-    onClick={() => window.open(IT_HELP_TICKET_URL, "_blank")}
-  >
-    IT Help Ticket
-  </button>
+          <button
+            className="btn"
+            onClick={() => window.open(IT_HELP_TICKET_URL, "_blank")}
+          >
+            IT Help Ticket
+          </button>
 
-  <button
-    className="btn"
-    onClick={() => window.open(HIRING_REQUEST_URL, "_blank")}
-  >
-    Raise Hiring Request
-  </button>
+          <button
+            className="btn"
+            onClick={() => window.open(HIRING_REQUEST_URL, "_blank")}
+          >
+            Raise Hiring Request
+          </button>
 
-  <button
-    className="btn"
-    onClick={() => window.open(MONTHLY_FEEDBACK_URL, "_blank")}
-  >
-    GBSL Monthly Feedback
-  </button>
+          <button
+            className="btn"
+            onClick={() => window.open(MONTHLY_FEEDBACK_URL, "_blank")}
+          >
+            GBSL Monthly Feedback
+          </button>
 
-  <button
-    className="btn"
-    onClick={() => window.open(COMPANY_POLICIES_URL, "_blank")}
-  >
-    Company Policies
-  </button>
-</div>
+          <button
+            className="btn"
+            onClick={() => window.open(COMPANY_POLICIES_URL, "_blank")}
+          >
+            Company Policies
+          </button>
+        </div>
 
       </div>
     </div>
@@ -999,6 +1023,33 @@ function App() {
     return (str || '').toString().trim().toLowerCase();
   }
 
+  // Rehydrate MSAL account on app mount so page reloads keep the user signed in
+  useEffect(() => {
+    (async () => {
+      try {
+        const acct = window.msalOneDrive && window.msalOneDrive.getAccount ? window.msalOneDrive.getAccount() : null;
+        if (acct) {
+          const email =
+            (acct.username ||
+             acct.email ||
+             (acct.idTokenClaims && acct.idTokenClaims.preferred_username) ||
+             "").toLowerCase();
+          const name = acct.name || email;
+          setUser({ email, name });
+          window.currentSignedInEmailForAutoRefresh = email;
+          // attempt to load data silently (getToken will try silent)
+          await loadLiveDataFor(email);
+          // start auto refresh (every 60s)
+          startAutoRefresh(60000);
+        } else {
+          console.debug("[auth] no stored MSAL account on mount.");
+        }
+      } catch (e) {
+        console.warn("[auth] rehydrate failed:", e);
+      }
+    })();
+  }, []);
+
   async function handleMsSignIn() {
     try {
       setError('');
@@ -1018,10 +1069,13 @@ function App() {
       setUser({ email, name });
       setActiveTab('Weekly Agenda');
 
+      // expose for auto-refresh to use
+      window.currentSignedInEmailForAutoRefresh = email;
+
+      // load data for user (this uses the in-component loader)
       await loadLiveDataFor(email);
 
-      // start auto-refresh polling (60s). change to 30000 for 30s if desired
-      window.currentSignedInEmailForAutoRefresh = email;
+      // start auto-refresh (60s default)
       startAutoRefresh(60000);
 
     } catch (e) {
@@ -1031,6 +1085,13 @@ function App() {
   }
 
   async function loadLiveDataFor(userEmail) {
+    // mutex to avoid overlapping calls
+    if (window.__loadLiveDataInProgress) {
+      console.debug("loadLiveDataFor: already running, skipping concurrent call");
+      return;
+    }
+    window.__loadLiveDataInProgress = true;
+
     try {
       setLoading(true);
       setError("");
@@ -1040,7 +1101,6 @@ function App() {
 
       /* ===== 1) EMPLOYEES TABLE ===== */
       const empRows = await window.fetchOneDriveTable("employees").catch(() => null);
-
       if (empRows && empRows.length) {
         const mappedEmps = empRows.map((r) => {
           const id =
@@ -1092,17 +1152,19 @@ function App() {
           mappedEmps.find(e => normalize(e.altEmail) === lowerEmail) ||
           null;
 
+        // commit employees only when fetched & mapped
         setEmployees(mappedEmps);
         if (me) {
           me = { ...me, email: me.email || me.primaryEmail || me.altEmail };
           setCurrentEmployee(me);
         } else {
-          console.warn(
-            "No employee row matching email:",
-            lowerEmail,
-            "Check Employees table 'Microsoft Email ID' / 'Email address' columns."
-          );
+          console.warn("No employee row matching email:", lowerEmail, "Check Employees table 'Microsoft Email ID' / 'Email address' columns.");
         }
+      } else if (empRows === null) {
+        console.warn("Employees fetch failed; preserving previous employees state.");
+      } else {
+        setEmployees([]);
+        setCurrentEmployee(null);
       }
 
       const myId = me && me.id ? normalize(me.id) : null;
@@ -1166,12 +1228,19 @@ function App() {
         });
 
         if (lowerEmail) {
-          mapped = mapped.filter(
-            (a) => normalize(a.employeeEmail) === lowerEmail
-          );
+          const filtered = mapped.filter((a) => normalize(a.employeeEmail) === lowerEmail);
+          if (filtered.length === 0 && attendance && attendance.length > 0) {
+            console.warn("Filtered attendance is empty but previous attendance existed; keeping previous data (possible transient).");
+          } else {
+            setAttendance(filtered);
+          }
+        } else {
+          setAttendance(mapped);
         }
-
-        setAttendance(mapped);
+      } else if (attRows === null) {
+        console.warn("Attendance fetch failed; preserving previous attendance state.");
+      } else {
+        setAttendance([]);
       }
 
       /* ===== 3) LEAVES TABLE ===== */
@@ -1230,12 +1299,19 @@ function App() {
         });
 
         if (myId) {
-          mapped = mapped.filter(
-            (l) => normalize(l.employeeId) === myId
-          );
+          const filtered = mapped.filter((l) => normalize(l.employeeId) === myId);
+          if (filtered.length === 0 && leaves && leaves.length > 0) {
+            console.warn("Filtered leaves is empty but previous leaves existed; keeping previous data (possible transient).");
+          } else {
+            setLeaves(filtered);
+          }
+        } else {
+          setLeaves(mapped);
         }
-
-        setLeaves(mapped);
+      } else if (leavesRows === null) {
+        console.warn("Leaves fetch failed; preserving previous leaves state.");
+      } else {
+        setLeaves([]);
       }
 
       /* ===== 4) LEAVE CALCULATION TABLE ===== */
@@ -1271,7 +1347,17 @@ function App() {
             availableCL: half - usedCL,
             availableSL: half - usedSL
           });
+        } else {
+          console.debug("No leaveCalc row matched current user; preserving previous leaveSummary.");
         }
+      } else if (calcRows === null) {
+        console.warn("leaveCalc fetch failed; preserving leaveSummary.");
+      } else {
+        setLeaveSummary({
+          allottedCL:0, allottedSL:0,
+          usedCL:0, usedSL:0,
+          availableCL:0, availableSL:0
+        });
       }
 
       /* ===== 5) WEEKLY AGENDA TABLE ===== */
@@ -1291,10 +1377,19 @@ function App() {
         }));
 
         if (lowerEmail) {
-          mapped = mapped.filter(r => normalize(r.assigneeEmail) === lowerEmail);
+          const filtered = mapped.filter(r => normalize(r.assigneeEmail) === lowerEmail);
+          if (filtered.length === 0 && weeklyAgenda && weeklyAgenda.length > 0) {
+            console.warn("Filtered weeklyAgenda is empty but previous weeklyAgenda existed; keeping previous data (possible transient).");
+          } else {
+            setWeeklyAgenda(filtered);
+          }
+        } else {
+          setWeeklyAgenda(mapped);
         }
-
-        setWeeklyAgenda(mapped);
+      } else if (agendaRows === null) {
+        console.warn("weeklyAgenda fetch failed; preserving previous weeklyAgenda.");
+      } else {
+        setWeeklyAgenda([]);
       }
 
     } catch (err) {
@@ -1302,18 +1397,14 @@ function App() {
       setError("Error loading data from Excel. Check console for details.");
     } finally {
       setLoading(false);
+      window.__loadLiveDataInProgress = false;
     }
   }
 
-  // expose loader for auto-refresh (auto-refresh code runs outside App scope)
+  // expose to auto-refresh world:
   window.loadLiveDataFor = loadLiveDataFor;
 
   function handleLogout() {
-    // stop auto-refresh when user logs out
-    try { stopAutoRefresh(); } catch(e){/* ignore */ }
-    window.currentSignedInEmailForAutoRefresh = null;
-    window.loadLiveDataFor = null;
-
     setUser(null);
     setCurrentEmployee(null);
     setEmployees([]);
@@ -1321,6 +1412,11 @@ function App() {
     setLeaves([]);
     setWeeklyAgenda([]);
     setActiveTab('Attendance');
+    // stop auto refresh
+    try { stopAutoRefresh(); } catch(e){}
+    // clear any saved email for autoRefresh
+    window.currentSignedInEmailForAutoRefresh = null;
+    // Optionally: sign out MSAL (not called here to keep simple)
   }
 
   if (!user) {
