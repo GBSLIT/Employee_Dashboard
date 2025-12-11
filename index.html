@@ -362,6 +362,116 @@ function formatExcelDuration(value) {
 
   return `${day}-${month}-${year}`;  // dd-MMM-yyyy
 }
+
+/* ---------- AUTO-REFRESH HELPERS (NEW) ---------- */
+/* Non-invasive auto-refresh that polls drive item's lastModifiedDateTime and refreshes only on change.
+   Safe defaults: 60s interval. Uses existing getToken() and existing loadLiveDataFor() */
+let __autoRefreshTimer = null;
+let __lastKnownDriveModified = null;
+let __autoRefreshRunning = false;
+let __autoRefreshInProgress = false;
+
+/* small retry wrapper (resilient for metadata fetch) */
+async function fetchWithRetry(url, options = {}, retries = 2, delayMs = 600) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) throw res;
+      return res;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, delayMs * (attempt + 1)));
+    }
+  }
+}
+
+/* fetch lightweight drive metadata and return lastModifiedDateTime string or null */
+async function fetchDriveLastModified() {
+  try {
+    const token = await getToken();
+    const url = `https://graph.microsoft.com/v1.0/drives/${DRIVE_ID}/items/${FILE_ID}`;
+    const res = await fetchWithRetry(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Cache-Control": "no-cache, no-store",
+        Pragma: "no-cache"
+      }
+    }, 2, 600);
+    const json = await res.json();
+    return json && json.lastModifiedDateTime ? json.lastModifiedDateTime : null;
+  } catch (err) {
+    console.warn("fetchDriveLastModified failed:", err);
+    return null;
+  }
+}
+
+/**
+ * startAutoRefresh(intervalMs = 60000)
+ * - intervalMs: milliseconds (default 60000)
+ * - The function avoids overlapping runs and will call loadLiveDataFor(email) when change detected.
+ */
+function startAutoRefresh(intervalMs = 60000) {
+  // avoid multiple timers
+  stopAutoRefresh();
+  __autoRefreshRunning = true;
+  __lastKnownDriveModified = null;
+
+  // initialize immediately
+  (async () => {
+    try {
+      __lastKnownDriveModified = await fetchDriveLastModified();
+    } catch (e) {
+      console.warn("initial drive metadata fetch failed:", e);
+    }
+  })();
+
+  __autoRefreshTimer = setInterval(async () => {
+    if (!__autoRefreshRunning) return;
+    if (__autoRefreshInProgress) return; // avoid overlapping
+    __autoRefreshInProgress = true;
+    try {
+      const last = await fetchDriveLastModified();
+      if (!last) return;
+      if (!__lastKnownDriveModified) {
+        __lastKnownDriveModified = last;
+        return;
+      }
+      if (last !== __lastKnownDriveModified) {
+        __lastKnownDriveModified = last;
+        console.info("Drive changed, auto-refreshing data:", last);
+        try {
+          // prefer stored signed-in email if available
+          if (window.currentSignedInEmailForAutoRefresh) {
+            await loadLiveDataFor(window.currentSignedInEmailForAutoRefresh);
+          } else {
+            const acct = window.msalOneDrive.getAccount();
+            const email = acct && (acct.username || acct.email || (acct.idTokenClaims && acct.idTokenClaims.preferred_username));
+            if (email) await loadLiveDataFor(email.toLowerCase());
+          }
+        } catch (e) {
+          console.error("auto-refresh loadLiveDataFor failed:", e);
+        }
+      }
+    } catch (err) {
+      console.warn("auto refresh tick error:", err);
+    } finally {
+      __autoRefreshInProgress = false;
+    }
+  }, intervalMs);
+}
+
+/* stop the auto-refresh */
+function stopAutoRefresh() {
+  __autoRefreshRunning = false;
+  if (__autoRefreshTimer) {
+    clearInterval(__autoRefreshTimer);
+    __autoRefreshTimer = null;
+  }
+  __lastKnownDriveModified = null;
+  __autoRefreshInProgress = false;
+}
+
 /* ------------ Login Card ------------ */
 function LoginPage({ onSignIn, error }) {
   return (
@@ -876,6 +986,11 @@ function App() {
       setActiveTab('Weekly Agenda');
 
       await loadLiveDataFor(email);
+
+      // start auto-refresh polling (60s). change to 30000 for 30s if desired
+      window.currentSignedInEmailForAutoRefresh = email;
+      startAutoRefresh(60000);
+
     } catch (e) {
       console.error(e);
       setError('Microsoft sign-in failed. See console for details.');
@@ -1158,6 +1273,10 @@ function App() {
   }
 
   function handleLogout() {
+    // stop auto-refresh when user logs out
+    try { stopAutoRefresh(); } catch(e){/* ignore */ }
+    window.currentSignedInEmailForAutoRefresh = null;
+
     setUser(null);
     setCurrentEmployee(null);
     setEmployees([]);
@@ -1216,12 +1335,3 @@ ReactDOM.createRoot(document.getElementById("root")).render(<App />);
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
